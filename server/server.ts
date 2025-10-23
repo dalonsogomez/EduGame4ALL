@@ -3,6 +3,11 @@ import express from 'express';
 import { Request, Response } from 'express';
 import basicRoutes from './routes/index';
 import authRoutes from './routes/authRoutes';
+import gameRoutes from './routes/gameRoutes';
+import progressRoutes from './routes/progressRoutes';
+import rewardRoutes from './routes/rewardRoutes';
+import resourceRoutes from './routes/resourceRoutes';
+import dashboardRoutes from './routes/dashboardRoutes';
 import { connectDB } from './config/database';
 import cors from 'cors';
 
@@ -38,6 +43,16 @@ app.on("error", (error: Error) => {
 app.use(basicRoutes);
 // Authentication Routes
 app.use('/api/auth', authRoutes);
+// Game Routes
+app.use('/api/games', gameRoutes);
+// Progress Routes
+app.use('/api/progress', progressRoutes);
+// Reward Routes
+app.use('/api/rewards', rewardRoutes);
+// Resource Routes
+app.use('/api/resources', resourceRoutes);
+// Dashboard Routes
+app.use('/api/dashboard', dashboardRoutes);
 
 // If no routes handled the request, it's a 404
 app.use((req: Request, res: Response) => {
