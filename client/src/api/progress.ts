@@ -126,10 +126,10 @@ export const getGameHistory = async (limit?: number) => {
 // Description: Get weekly report
 // Endpoint: GET /api/progress/weekly-report
 // Request: {}
-// Response: { report: object }
+// Response: { report: WeeklyReport }
 export const getWeeklyReport = async () => {
   // Mocking the response
-  return new Promise<{ report: any }>((resolve) => {
+  return new Promise<{ report: WeeklyReport }>((resolve) => {
     setTimeout(() => {
       resolve({
         report: {
@@ -159,7 +159,18 @@ export const getWeeklyReport = async () => {
   // Uncomment the below lines to make an actual API call
   // try {
   //   return await api.get('/api/progress/weekly-report');
-  // } catch (error: any) {
-  //   throw new Error(error?.response?.data?.message || error.message);
+  // } catch (error: unknown) {
+  //   const err = error as { response?: { data?: { message?: string } }; message: string };
+  //   throw new Error(err?.response?.data?.message || err.message);
   // }
 };
+
+interface WeeklyReport {
+  gamesPlayed: number;
+  totalTime: number;
+  xpEarned: number;
+  strengths: string[];
+  improvements: string[];
+  insights: string[];
+  weeklyActivity: Array<{ day: string; xp: number }>;
+}

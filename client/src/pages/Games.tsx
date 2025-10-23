@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,34 +19,27 @@ export function Games() {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [difficulty, setDifficulty] = useState<string>('all');
 
-  useEffect(() => {
-    loadGames();
-  }, []);
-
-  useEffect(() => {
-    filterGames();
-  }, [games, activeCategory, difficulty]);
-
-  const loadGames = async () => {
+  const loadGames = useCallback(async () => {
     try {
       setLoading(true);
       console.log('Loading games...');
       const response = await getGames();
       setGames(response.games);
       console.log('Games loaded:', response.games.length);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       console.error('Error loading games:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to load games',
+        description: err.message || 'Failed to load games',
         variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
-  const filterGames = () => {
+  const filterGames = useCallback(() => {
     let filtered = games;
 
     if (activeCategory !== 'all') {
@@ -58,7 +51,15 @@ export function Games() {
     }
 
     setFilteredGames(filtered);
-  };
+  }, [games, activeCategory, difficulty]);
+
+  useEffect(() => {
+    loadGames();
+  }, [loadGames]);
+
+  useEffect(() => {
+    filterGames();
+  }, [filterGames]);
 
   const handlePlayGame = (gameId: string) => {
     console.log('Playing game:', gameId);

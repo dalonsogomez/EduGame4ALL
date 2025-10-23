@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { WelcomeBanner } from '@/components/dashboard/WelcomeBanner';
 import { QuickStats } from '@/components/dashboard/QuickStats';
@@ -11,20 +11,26 @@ import { getDashboardData } from '@/api/dashboard';
 import { getGames } from '@/api/games';
 import { useToast } from '@/hooks/useToast';
 import { Loader2 } from 'lucide-react';
+import { UserProfile } from '@/types';
+import { SkillLevel, DailyChallenge as DailyChallengeType, ActivityItem, LeaderboardEntry } from '@/types';
+import { Game } from '@/types';
+
+interface DashboardData {
+  skills: SkillLevel[];
+  dailyChallenge: DailyChallengeType;
+  recentActivity: ActivityItem[];
+  leaderboard: LeaderboardEntry[];
+}
 
 export function Dashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<any>(null);
-  const [dashboardData, setDashboardData] = useState<any>(null);
-  const [recommendedGames, setRecommendedGames] = useState<any[]>([]);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [recommendedGames, setRecommendedGames] = useState<Game[]>([]);
 
-  useEffect(() => {
-    loadDashboard();
-  }, []);
-
-  const loadDashboard = async () => {
+  const loadDashboard = useCallback(async () => {
     try {
       setLoading(true);
       console.log('Loading dashboard data...');
@@ -40,17 +46,22 @@ export function Dashboard() {
       setRecommendedGames(gamesRes.games.slice(0, 3));
 
       console.log('Dashboard data loaded successfully');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       console.error('Error loading dashboard:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to load dashboard',
+        description: err.message || 'Failed to load dashboard',
         variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
 
   const handlePlayGame = (gameId: string) => {
     console.log('Navigating to game:', gameId);
