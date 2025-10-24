@@ -14,6 +14,13 @@ export interface IGameSession extends Document {
     isCorrect: boolean;
     pointsEarned: number;
   }>;
+  feedback?: {
+    strengths: string[];
+    improvements: string[];
+    tips: string[];
+    nextRecommendations: string[];
+    personalizedMessage: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,6 +82,28 @@ const GameSessionSchema: Schema = new Schema(
         },
       },
     ],
+    feedback: {
+      strengths: {
+        type: [String],
+        default: [],
+      },
+      improvements: {
+        type: [String],
+        default: [],
+      },
+      tips: {
+        type: [String],
+        default: [],
+      },
+      nextRecommendations: {
+        type: [String],
+        default: [],
+      },
+      personalizedMessage: {
+        type: String,
+        default: '',
+      },
+    },
   },
   {
     timestamps: true,

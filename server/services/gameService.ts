@@ -1,6 +1,8 @@
 import { Game, IGame } from '../models/Game';
 import { GameSession, IGameSession } from '../models/GameSession';
 import { UserProgress } from '../models/UserProgress';
+import User from '../models/User';
+import { generateGameFeedback } from './llmService';
 import mongoose from 'mongoose';
 
 export class GameService {
@@ -58,7 +60,7 @@ export class GameService {
         pointsEarned: number;
       }>;
     }
-  ): Promise<{ session: IGameSession; xpEarned: number }> {
+  ): Promise<{ session: IGameSession; xpEarned: number; feedback: any }> {
     console.log('[GameService] Submitting game session for user:', userId, 'game:', gameId);
 
     if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(gameId)) {
@@ -70,11 +72,56 @@ export class GameService {
       throw new Error('Game not found');
     }
 
+    // Get user details for personalized feedback
+    const user = await User.findById(userId);
+    const userProgress = await UserProgress.findOne({ userId });
+
     // Calculate XP earned (proportional to score)
     const scorePercentage = sessionData.score / sessionData.maxScore;
     const xpEarned = Math.round(game.xpReward * scorePercentage);
 
-    // Create game session
+    console.log('[GameService] Generating AI-powered feedback');
+
+    // Generate AI-powered personalized feedback
+    let feedback;
+    try {
+      // Map answers with actual question text and options
+      const detailedAnswers = sessionData.answers.map(answer => {
+        const question = game.questions[answer.questionIndex];
+        return {
+          question: question.question,
+          selectedAnswer: question.options[answer.selectedAnswer],
+          correctAnswer: question.options[question.correctAnswer],
+          isCorrect: answer.isCorrect,
+        };
+      });
+
+      feedback = await generateGameFeedback({
+        gameTitle: game.title,
+        gameCategory: game.category,
+        gameDifficulty: game.difficulty,
+        score: sessionData.score,
+        maxScore: sessionData.maxScore,
+        timeSpent: sessionData.timeSpent,
+        answers: detailedAnswers,
+        userLevel: userProgress?.level || 1,
+        userTargetLanguage: user?.targetLanguage,
+      });
+
+      console.log('[GameService] AI feedback generated successfully');
+    } catch (error) {
+      console.error('[GameService] Failed to generate AI feedback:', error);
+      // Use fallback feedback
+      feedback = {
+        strengths: ['Completed the game'],
+        improvements: ['Keep practicing to improve'],
+        tips: ['Review the material regularly'],
+        nextRecommendations: ['Try similar games'],
+        personalizedMessage: `Great job completing ${game.title}! You earned ${xpEarned} XP.`,
+      };
+    }
+
+    // Create game session with feedback
     const session = await GameSession.create({
       userId,
       gameId,
@@ -84,14 +131,15 @@ export class GameService {
       timeSpent: sessionData.timeSpent,
       completedAt: new Date(),
       answers: sessionData.answers,
+      feedback,
     });
 
-    console.log('[GameService] Game session created, XP earned:', xpEarned);
+    console.log('[GameService] Game session created with ID:', session._id, 'XP earned:', xpEarned);
 
     // Update user progress
     await this.updateUserProgress(userId, game.category, xpEarned);
 
-    return { session, xpEarned };
+    return { session, xpEarned, feedback };
   }
 
   // Update user progress after game completion
@@ -166,5 +214,66 @@ export class GameService {
     }
 
     return Math.round((sessions[0].score / sessions[0].maxScore) * 100);
+  }
+
+  // Get a specific game session by ID
+  static async getGameSession(sessionId: string, userId: string): Promise<IGameSession | null> {
+    console.log('[GameService] Fetching game session:', sessionId, 'for user:', userId);
+
+    if (!mongoose.Types.ObjectId.isValid(sessionId)) {
+      throw new Error('Invalid session ID');
+    }
+
+    const session = await GameSession.findOne({ _id: sessionId, userId })
+      .populate('gameId', 'title category difficulty xpReward')
+      .lean();
+
+    if (!session) {
+      console.log('[GameService] Game session not found');
+      return null;
+    }
+
+    console.log('[GameService] Game session found');
+    return session as IGameSession;
+  }
+
+  // Get user's game sessions with optional filters
+  static async getGameSessions(
+    userId: string,
+    filters?: {
+      gameId?: string;
+      startDate?: Date;
+      endDate?: Date;
+      limit?: number;
+    }
+  ): Promise<IGameSession[]> {
+    console.log('[GameService] Fetching game sessions for user:', userId, 'with filters:', filters);
+
+    const query: any = { userId };
+
+    if (filters?.gameId && mongoose.Types.ObjectId.isValid(filters.gameId)) {
+      query.gameId = filters.gameId;
+    }
+
+    if (filters?.startDate || filters?.endDate) {
+      query.completedAt = {};
+      if (filters.startDate) {
+        query.completedAt.$gte = filters.startDate;
+      }
+      if (filters.endDate) {
+        query.completedAt.$lte = filters.endDate;
+      }
+    }
+
+    const limit = filters?.limit || 50;
+
+    const sessions = await GameSession.find(query)
+      .populate('gameId', 'title category difficulty xpReward thumbnailUrl')
+      .sort({ completedAt: -1 })
+      .limit(limit)
+      .lean();
+
+    console.log(`[GameService] Found ${sessions.length} game sessions`);
+    return sessions as IGameSession[];
   }
 }

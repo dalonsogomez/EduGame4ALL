@@ -30,6 +30,70 @@ router.get('/', requireUser(ALL_ROLES), async (req: Request, res: Response) => {
   }
 });
 
+// Description: Get user's game sessions with optional filters
+// Endpoint: GET /api/games/sessions
+// Request: { gameId?: string, startDate?: string, endDate?: string, limit?: number }
+// Response: { sessions: Array<GameSession> }
+router.get('/sessions', requireUser(ALL_ROLES), async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user?._id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const { gameId, startDate, endDate, limit } = req.query;
+
+    const filters: any = {};
+
+    if (gameId) {
+      filters.gameId = gameId as string;
+    }
+
+    if (startDate) {
+      filters.startDate = new Date(startDate as string);
+    }
+
+    if (endDate) {
+      filters.endDate = new Date(endDate as string);
+    }
+
+    if (limit) {
+      filters.limit = parseInt(limit as string);
+    }
+
+    const sessions = await GameService.getGameSessions(req.user._id, filters);
+
+    res.status(200).json({ sessions });
+  } catch (error: any) {
+    console.error(`Error fetching game sessions: ${error.message}`);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Description: Get specific game session by ID
+// Endpoint: GET /api/games/sessions/:sessionId
+// Request: {}
+// Response: { session: GameSession }
+router.get('/sessions/:sessionId', requireUser(ALL_ROLES), async (req: AuthRequest, res: Response) => {
+  try {
+    const { sessionId } = req.params;
+
+    if (!req.user?._id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const session = await GameService.getGameSession(sessionId, req.user._id);
+
+    if (!session) {
+      return res.status(404).json({ error: 'Game session not found' });
+    }
+
+    res.status(200).json({ session });
+  } catch (error: any) {
+    console.error(`Error fetching game session: ${error.message}`);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Description: Get game by ID
 // Endpoint: GET /api/games/:id
 // Request: { id: string }
@@ -51,10 +115,10 @@ router.get('/:id', requireUser(ALL_ROLES), async (req: Request, res: Response) =
   }
 });
 
-// Description: Submit game session
+// Description: Submit game session with AI-powered feedback
 // Endpoint: POST /api/games/:id/session
 // Request: { score: number, maxScore: number, timeSpent: number, answers: Array<Answer> }
-// Response: { session: GameSession, xpEarned: number }
+// Response: { session: GameSession, xpEarned: number, feedback: AIFeedback }
 router.post('/:id/session', requireUser(ALL_ROLES), async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
