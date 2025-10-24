@@ -13,8 +13,10 @@
     "lint": "eslint . --format json",
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed": "tsx scripts/seed.ts",
+    "manage-games": "tsx scripts/manage-games.ts",
     "test:profile": "tsx scripts/test-profile.ts",
-    "test:game-session": "tsx scripts/test-game-session.ts"
+    "test:game-session": "tsx scripts/test-game-session.ts",
+    "test:games-crud": "tsx scripts/test-games-crud.ts"
   },
   "keywords": [],
   "author": "",

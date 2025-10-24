@@ -83,3 +83,93 @@ export const getGameSessions = async (filters?: {
     throw new Error(error?.response?.data?.error || error.message);
   }
 };
+
+// Description: Create a new game (admin only)
+// Endpoint: POST /api/games
+// Request: { title: string, description: string, category: string, difficulty: number, duration: number, xpReward: number, thumbnailUrl?: string, questions: Array<Question> }
+// Response: { game: Game }
+export const createGame = async (gameData: {
+  title: string;
+  description: string;
+  category: 'language' | 'culture' | 'soft-skills';
+  difficulty: number;
+  duration: number;
+  xpReward: number;
+  thumbnailUrl?: string;
+  questions: Array<{
+    question: string;
+    options: string[];
+    correctAnswer: number;
+    explanation?: string;
+    points: number;
+  }>;
+}) => {
+  try {
+    const response = await api.post('/api/games', gameData);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error?.response?.data?.error || error.message);
+  }
+};
+
+// Description: Update an existing game (admin only)
+// Endpoint: PUT /api/games/:id
+// Request: { title?: string, description?: string, category?: string, difficulty?: number, duration?: number, xpReward?: number, thumbnailUrl?: string, isActive?: boolean, questions?: Array<Question> }
+// Response: { game: Game }
+export const updateGame = async (
+  gameId: string,
+  updateData: Partial<{
+    title: string;
+    description: string;
+    category: 'language' | 'culture' | 'soft-skills';
+    difficulty: number;
+    duration: number;
+    xpReward: number;
+    thumbnailUrl: string;
+    isActive: boolean;
+    questions: Array<{
+      question: string;
+      options: string[];
+      correctAnswer: number;
+      explanation?: string;
+      points: number;
+    }>;
+  }>
+) => {
+  try {
+    const response = await api.put(`/api/games/${gameId}`, updateData);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error?.response?.data?.error || error.message);
+  }
+};
+
+// Description: Delete a game (soft delete, admin only)
+// Endpoint: DELETE /api/games/:id
+// Request: {}
+// Response: { message: string, game: Game }
+export const deleteGame = async (gameId: string) => {
+  try {
+    const response = await api.delete(`/api/games/${gameId}`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error?.response?.data?.error || error.message);
+  }
+};
+
+// Description: Get all games including inactive (admin only)
+// Endpoint: GET /api/games/admin/all
+// Request: { category?: string, difficulty?: number, isActive?: boolean }
+// Response: { games: Array<Game> }
+export const getAllGames = async (filters?: {
+  category?: string;
+  difficulty?: number;
+  isActive?: boolean;
+}) => {
+  try {
+    const response = await api.get('/api/games/admin/all', { params: filters });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error?.response?.data?.error || error.message);
+  }
+};

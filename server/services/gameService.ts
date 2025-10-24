@@ -276,4 +276,166 @@ export class GameService {
     console.log(`[GameService] Found ${sessions.length} game sessions`);
     return sessions as IGameSession[];
   }
+
+  // Create a new game (admin only)
+  static async createGame(gameData: {
+    title: string;
+    description: string;
+    category: 'language' | 'culture' | 'soft-skills';
+    difficulty: number;
+    duration: number;
+    xpReward: number;
+    thumbnailUrl?: string;
+    questions: Array<{
+      question: string;
+      options: string[];
+      correctAnswer: number;
+      explanation?: string;
+      points: number;
+    }>;
+  }): Promise<IGame> {
+    console.log('[GameService] Creating new game:', gameData.title);
+
+    // Validate difficulty
+    if (gameData.difficulty < 1 || gameData.difficulty > 5) {
+      throw new Error('Difficulty must be between 1 and 5');
+    }
+
+    // Validate questions
+    if (!gameData.questions || gameData.questions.length === 0) {
+      throw new Error('At least one question is required');
+    }
+
+    // Validate each question
+    for (const question of gameData.questions) {
+      if (question.options.length < 2) {
+        throw new Error('Each question must have at least 2 options');
+      }
+      if (question.correctAnswer < 0 || question.correctAnswer >= question.options.length) {
+        throw new Error('Correct answer index is out of bounds');
+      }
+    }
+
+    const game = await Game.create({
+      ...gameData,
+      isActive: true,
+    });
+
+    console.log('[GameService] Game created successfully with ID:', game._id);
+    return game;
+  }
+
+  // Update an existing game (admin only)
+  static async updateGame(
+    gameId: string,
+    updateData: Partial<{
+      title: string;
+      description: string;
+      category: 'language' | 'culture' | 'soft-skills';
+      difficulty: number;
+      duration: number;
+      xpReward: number;
+      thumbnailUrl: string;
+      isActive: boolean;
+      questions: Array<{
+        question: string;
+        options: string[];
+        correctAnswer: number;
+        explanation?: string;
+        points: number;
+      }>;
+    }>
+  ): Promise<IGame | null> {
+    console.log('[GameService] Updating game:', gameId);
+
+    if (!mongoose.Types.ObjectId.isValid(gameId)) {
+      throw new Error('Invalid game ID');
+    }
+
+    // Validate difficulty if provided
+    if (updateData.difficulty !== undefined && (updateData.difficulty < 1 || updateData.difficulty > 5)) {
+      throw new Error('Difficulty must be between 1 and 5');
+    }
+
+    // Validate questions if provided
+    if (updateData.questions) {
+      if (updateData.questions.length === 0) {
+        throw new Error('At least one question is required');
+      }
+
+      for (const question of updateData.questions) {
+        if (question.options.length < 2) {
+          throw new Error('Each question must have at least 2 options');
+        }
+        if (question.correctAnswer < 0 || question.correctAnswer >= question.options.length) {
+          throw new Error('Correct answer index is out of bounds');
+        }
+      }
+    }
+
+    const game = await Game.findByIdAndUpdate(gameId, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!game) {
+      console.log('[GameService] Game not found for update');
+      return null;
+    }
+
+    console.log('[GameService] Game updated successfully:', game.title);
+    return game;
+  }
+
+  // Delete a game (soft delete by setting isActive to false)
+  static async deleteGame(gameId: string): Promise<IGame | null> {
+    console.log('[GameService] Deleting game:', gameId);
+
+    if (!mongoose.Types.ObjectId.isValid(gameId)) {
+      throw new Error('Invalid game ID');
+    }
+
+    // Soft delete by setting isActive to false
+    const game = await Game.findByIdAndUpdate(
+      gameId,
+      { isActive: false },
+      { new: true }
+    );
+
+    if (!game) {
+      console.log('[GameService] Game not found for deletion');
+      return null;
+    }
+
+    console.log('[GameService] Game deleted successfully:', game.title);
+    return game;
+  }
+
+  // Get all games including inactive ones (admin only)
+  static async getAllGames(filters?: {
+    category?: string;
+    difficulty?: number;
+    isActive?: boolean;
+  }): Promise<IGame[]> {
+    console.log('[GameService] Fetching all games (including inactive) with filters:', filters);
+
+    const query: any = {};
+
+    if (filters?.category) {
+      query.category = filters.category;
+    }
+
+    if (filters?.difficulty) {
+      query.difficulty = filters.difficulty;
+    }
+
+    if (filters?.isActive !== undefined) {
+      query.isActive = filters.isActive;
+    }
+
+    const games = await Game.find(query).sort({ createdAt: -1 });
+    console.log(`[GameService] Found ${games.length} games`);
+
+    return games;
+  }
 }
