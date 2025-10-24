@@ -1,6 +1,7 @@
 import { UserProgress } from '../models/UserProgress';
 import { GameSession } from '../models/GameSession';
 import { Game } from '../models/Game';
+import { UserBadge } from '../models/UserBadge';
 import mongoose from 'mongoose';
 
 export class DashboardService {
@@ -12,29 +13,26 @@ export class DashboardService {
       throw new Error('Invalid user ID');
     }
 
-    const [userProgress, recentActivity, leaderboard, dailyChallenge, recommendedGames] =
-      await Promise.all([
-        this.getUserStats(userId),
-        this.getRecentActivity(userId),
-        this.getLeaderboard(userId),
-        this.getDailyChallenge(userId),
-        this.getRecommendedGames(userId),
-      ]);
+    const [skills, recentActivity, leaderboard, dailyChallenge] = await Promise.all([
+      this.getUserSkills(userId),
+      this.getRecentActivity(userId),
+      this.getLeaderboard(userId),
+      this.getDailyChallenge(userId),
+    ]);
 
     const dashboardData = {
-      userProgress,
+      skills,
       recentActivity,
       leaderboard,
       dailyChallenge,
-      recommendedGames,
     };
 
     console.log('[DashboardService] Dashboard data fetched successfully');
     return dashboardData;
   }
 
-  // Get user stats
-  private static async getUserStats(userId: string): Promise<any> {
+  // Get user skills in the format expected by frontend
+  private static async getUserSkills(userId: string): Promise<any[]> {
     let progress = await UserProgress.findOne({ userId });
 
     if (!progress) {
@@ -55,152 +53,175 @@ export class DashboardService {
       });
     }
 
-    // Count weekly games
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    const weeklyGames = await GameSession.countDocuments({
-      userId,
-      completedAt: { $gte: oneWeekAgo },
-    });
-
-    return {
-      totalXP: progress.totalXP,
-      level: progress.level,
-      streak: progress.streak,
-      weeklyGames,
-      weeklyGoal: progress.weeklyGoal,
-      skills: progress.skills,
+    // XP required for next level follows a progressive formula
+    const calculateXPToNextLevel = (level: number): number => {
+      return Math.floor(100 * Math.pow(1.5, level - 1));
     };
+
+    const skills = progress.skills;
+
+    return [
+      {
+        category: 'language',
+        level: skills.language.level,
+        xp: skills.language.xp,
+        xpToNextLevel: calculateXPToNextLevel(skills.language.level),
+        percentage: Math.floor(
+          (skills.language.xp / calculateXPToNextLevel(skills.language.level)) * 100
+        ),
+      },
+      {
+        category: 'culture',
+        level: skills.culture.level,
+        xp: skills.culture.xp,
+        xpToNextLevel: calculateXPToNextLevel(skills.culture.level),
+        percentage: Math.floor(
+          (skills.culture.xp / calculateXPToNextLevel(skills.culture.level)) * 100
+        ),
+      },
+      {
+        category: 'softSkills',
+        level: skills.softSkills.level,
+        xp: skills.softSkills.xp,
+        xpToNextLevel: calculateXPToNextLevel(skills.softSkills.level),
+        percentage: Math.floor(
+          (skills.softSkills.xp / calculateXPToNextLevel(skills.softSkills.level)) * 100
+        ),
+      },
+    ];
   }
 
-  // Get recent activity
-  private static async getRecentActivity(userId: string, limit = 5): Promise<any[]> {
+  // Get recent activity with proper formatting
+  private static async getRecentActivity(userId: string, limit = 10): Promise<any[]> {
+    const activities: any[] = [];
+
+    // Get recent game sessions
     const sessions = await GameSession.find({ userId })
       .populate('gameId')
       .sort({ completedAt: -1 })
-      .limit(limit);
+      .limit(5);
 
-    return sessions.map((session) => {
+    sessions.forEach((session) => {
       const game = session.gameId as any;
-      return {
-        type: 'game_completed',
-        message: `Completed ${game.title}`,
-        timestamp: session.completedAt,
-        xpEarned: session.xpEarned,
-      };
+      if (game) {
+        activities.push({
+          _id: (session._id as any).toString(),
+          type: 'game',
+          message: `Completed "${game.title}" - earned ${session.xpEarned} XP`,
+          timestamp: session.completedAt.toISOString(),
+          icon: '🎮',
+        });
+      }
     });
+
+    // Get recently earned badges
+    const recentBadges = await UserBadge.find({ userId, earnedAt: { $exists: true } })
+      .populate('badgeId')
+      .sort({ earnedAt: -1 })
+      .limit(3);
+
+    recentBadges.forEach((userBadge) => {
+      const badge = userBadge.badgeId as any;
+      if (badge && userBadge.earnedAt) {
+        activities.push({
+          _id: (userBadge._id as any).toString(),
+          type: 'badge',
+          message: `Earned the "${badge.name}" badge!`,
+          timestamp: userBadge.earnedAt.toISOString(),
+          icon: '🏆',
+        });
+      }
+    });
+
+    // Check for level ups
+    const progress = await UserProgress.findOne({ userId });
+    if (progress && progress.level > 1) {
+      // Add a level milestone activity (using level as pseudo-timestamp)
+      activities.push({
+        _id: `level-${progress.level}`,
+        type: 'level',
+        message: `Reached Level ${progress.level}!`,
+        timestamp: progress.lastActivityDate.toISOString(),
+        icon: '⭐',
+      });
+    }
+
+    // Sort by timestamp and limit
+    return activities
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, limit);
   }
 
-  // Get leaderboard
+  // Get leaderboard with proper formatting
   private static async getLeaderboard(userId: string, limit = 10): Promise<any[]> {
     const topUsers = await UserProgress.find()
       .sort({ totalXP: -1 })
-      .limit(limit)
-      .populate('userId', 'email');
+      .limit(limit * 2) // Get more to account for null users
+      .populate('userId', 'email name');
 
-    const leaderboard = topUsers.map((progress, index) => {
+    // Filter out entries where user doesn't exist
+    const validUsers = topUsers.filter((progress) => progress.userId !== null);
+
+    const leaderboard = validUsers.slice(0, limit).map((progress, index) => {
       const user = progress.userId as any;
+      // Generate a consistent country code based on user ID (for demo purposes)
+      const countries = ['US', 'ES', 'FR', 'DE', 'IT', 'SY', 'MA', 'VE', 'CO', 'MX'];
+      const userIdStr = user._id ? user._id.toString() : user.toString();
+      const countryIndex = userIdStr.charCodeAt(0) % countries.length;
+
       return {
         rank: index + 1,
-        userId: progress.userId,
-        name: user.email.split('@')[0], // Use email prefix as name
+        userId: userIdStr,
+        username: user.name || user.email.split('@')[0], // Use name or email prefix
         xp: progress.totalXP,
-        level: progress.level,
-        isCurrentUser: progress.userId.toString() === userId,
+        country: countries[countryIndex],
+        isCurrentUser: userIdStr === userId,
       };
     });
 
     return leaderboard;
   }
 
-  // Get daily challenge
+  // Get daily challenge with proper formatting
   private static async getDailyChallenge(userId: string): Promise<any> {
-    // Get a random game for daily challenge
-    const games = await Game.find({ isActive: true });
-    if (games.length === 0) {
-      return null;
-    }
-
-    // Use date as seed for consistent daily challenge
-    const today = new Date().toISOString().split('T')[0];
-    const seed = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const dailyGameIndex = seed % games.length;
-    const dailyGame = games[dailyGameIndex];
-
-    // Check if user has completed it today
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const completedToday = await GameSession.findOne({
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
+
+    // Count games completed today
+    const completedToday = await GameSession.countDocuments({
       userId,
-      gameId: dailyGame._id,
-      completedAt: { $gte: todayStart },
+      completedAt: { $gte: todayStart, $lt: todayEnd },
     });
 
+    // Daily challenge: Complete 3 games
+    const dailyGoal = 3;
+    const progress = Math.min(completedToday, dailyGoal);
+
+    // Get a game for the daily challenge (use date as seed for consistency)
+    const games = await Game.find({ isActive: true });
+    let challengeGame = null;
+
+    if (games.length > 0) {
+      const today = new Date().toISOString().split('T')[0];
+      const seed = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const dailyGameIndex = seed % games.length;
+      challengeGame = games[dailyGameIndex];
+    }
+
     return {
-      game: {
-        id: dailyGame._id,
-        title: dailyGame.title,
-        description: dailyGame.description,
-        category: dailyGame.category,
-        difficulty: dailyGame.difficulty,
-        xpReward: dailyGame.xpReward,
-      },
-      completed: !!completedToday,
-      progress: completedToday ? 100 : 0,
+      _id: `daily-${todayStart.toISOString().split('T')[0]}`,
+      title: 'Complete 3 games today',
+      description: challengeGame
+        ? `Play educational games including "${challengeGame.title}"`
+        : 'Play educational games to improve your skills',
+      progress,
+      total: dailyGoal,
+      xpReward: 50,
+      bonusBadge: progress >= dailyGoal ? 'Daily Champion' : undefined,
     };
   }
 
-  // Get recommended games
-  private static async getRecommendedGames(userId: string, limit = 6): Promise<any[]> {
-    const userProgress = await UserProgress.findOne({ userId });
-
-    if (!userProgress) {
-      // Return random games for new users
-      const games = await Game.find({ isActive: true }).limit(limit);
-      return games.map((game) => ({
-        id: game._id,
-        title: game.title,
-        description: game.description,
-        category: game.category,
-        difficulty: game.difficulty,
-        duration: game.duration,
-        xpReward: game.xpReward,
-        thumbnailUrl: game.thumbnailUrl,
-      }));
-    }
-
-    // Find category with lowest XP and recommend games from that category
-    const skills = userProgress.skills;
-    let lowestCategory = 'language';
-    let lowestXP = skills.language.xp;
-
-    if (skills.culture.xp < lowestXP) {
-      lowestCategory = 'culture';
-      lowestXP = skills.culture.xp;
-    }
-
-    if (skills.softSkills.xp < lowestXP) {
-      lowestCategory = 'soft-skills';
-    }
-
-    // Get games from the category user needs to improve
-    const recommendedGames = await Game.find({
-      isActive: true,
-      category: lowestCategory,
-    })
-      .sort({ difficulty: 1 })
-      .limit(limit);
-
-    return recommendedGames.map((game) => ({
-      id: game._id,
-      title: game.title,
-      description: game.description,
-      category: game.category,
-      difficulty: game.difficulty,
-      duration: game.duration,
-      xpReward: game.xpReward,
-      thumbnailUrl: game.thumbnailUrl,
-    }));
-  }
 }
