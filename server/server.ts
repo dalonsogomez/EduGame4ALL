@@ -8,6 +8,7 @@ import progressRoutes from './routes/progressRoutes';
 import rewardRoutes from './routes/rewardRoutes';
 import resourceRoutes from './routes/resourceRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
+import profileRoutes from './routes/profileRoutes';
 import { connectDB } from './config/database';
 import cors from 'cors';
 
@@ -43,6 +44,8 @@ app.on("error", (error: Error) => {
 app.use(basicRoutes);
 // Authentication Routes
 app.use('/api/auth', authRoutes);
+// Profile Routes
+app.use('/api/profile', profileRoutes);
 // Game Routes
 app.use('/api/games', gameRoutes);
 // Progress Routes

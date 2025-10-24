@@ -6,6 +6,13 @@ import { ROLES, ALL_ROLES, RoleValues } from 'shared';
 export interface IUser extends Document {
   email: string;
   password: string;
+  name: string;
+  userType: 'child' | 'adult' | 'educator';
+  age?: number;
+  location: string;
+  nativeLanguage: string;
+  targetLanguage: string;
+  profilePhoto?: string;
   createdAt: Date;
   lastLoginAt: Date;
   isActive: boolean;
@@ -25,6 +32,36 @@ const schema = new Schema<IUser>({
     type: String,
     required: true,
     validate: { validator: isPasswordHash, message: 'Invalid password hash' },
+  },
+  name: {
+    type: String,
+    required: true,
+    default: '',
+  },
+  userType: {
+    type: String,
+    enum: ['child', 'adult', 'educator'],
+    default: 'adult',
+  },
+  age: {
+    type: Number,
+    min: 1,
+    max: 120,
+  },
+  location: {
+    type: String,
+    default: '',
+  },
+  nativeLanguage: {
+    type: String,
+    default: '',
+  },
+  targetLanguage: {
+    type: String,
+    default: '',
+  },
+  profilePhoto: {
+    type: String,
   },
   createdAt: {
     type: Date,

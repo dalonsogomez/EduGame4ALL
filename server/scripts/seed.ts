@@ -32,11 +32,33 @@ const seedData = async () => {
     const adminExists = await User.findOne({ email: 'admin@edugame4all.com' });
     if (!adminExists) {
       const hashedPassword = await generatePasswordHash('Admin@123');
-      await User.create({
+      const adminUser = await User.create({
         email: 'admin@edugame4all.com',
         password: hashedPassword,
         role: 'admin',
+        name: 'Admin User',
+        userType: 'educator',
+        location: 'System',
+        nativeLanguage: 'English',
+        targetLanguage: 'Spanish',
       });
+
+      // Create default progress for admin user
+      await UserProgress.create({
+        userId: adminUser._id,
+        totalXP: 0,
+        level: 1,
+        streak: 0,
+        lastActivityDate: new Date(),
+        weeklyGoal: 5,
+        weeklyProgress: 0,
+        skills: {
+          language: { xp: 0, level: 1 },
+          culture: { xp: 0, level: 1 },
+          softSkills: { xp: 0, level: 1 },
+        },
+      });
+
       console.log('✅ Admin user created: admin@edugame4all.com / Admin@123');
     } else {
       console.log('ℹ️  Admin user already exists');

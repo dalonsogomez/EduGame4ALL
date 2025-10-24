@@ -3,9 +3,11 @@ import { Request, Response } from 'express';
 import UserService from '../services/userService';
 import { requireUser } from './middlewares/auth';
 import User from '../models/User';
+import { UserProgress } from '../models/UserProgress';
 import { generateAccessToken, generateRefreshToken } from '../utils/auth';
 import jwt from 'jsonwebtoken';
 import { ALL_ROLES } from 'shared';
+import mongoose from 'mongoose';
 
 const router = express.Router();
 
@@ -41,7 +43,30 @@ router.post('/register', async (req: AuthRequest, res: Response) => {
     return res.json({ user: req.user });
   }
   try {
+    console.log(`[AuthRoutes] Registering new user: ${req.body.email}`);
     const user = await UserService.create(req.body);
+
+    // Create default user progress
+    const userProgress = await UserProgress.findOne({ userId: user._id });
+    if (!userProgress) {
+      console.log(`[AuthRoutes] Creating default progress for user: ${user._id}`);
+      await UserProgress.create({
+        userId: new mongoose.Types.ObjectId(user._id.toString()),
+        totalXP: 0,
+        level: 1,
+        streak: 0,
+        lastActivityDate: new Date(),
+        weeklyGoal: 5,
+        weeklyProgress: 0,
+        skills: {
+          language: { xp: 0, level: 1 },
+          culture: { xp: 0, level: 1 },
+          softSkills: { xp: 0, level: 1 },
+        },
+      });
+    }
+
+    console.log(`[AuthRoutes] User registered successfully: ${user._id}`);
     return res.status(200).json(user);
   } catch (error) {
     console.error(`Error while registering user: ${error}`);

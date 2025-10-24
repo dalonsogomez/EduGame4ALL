@@ -12,7 +12,8 @@
     "build:shared": "cd ../shared && npm run build",
     "lint": "eslint . --format json",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "test:profile": "tsx scripts/test-profile.ts"
   },
   "keywords": [],
   "author": "",
