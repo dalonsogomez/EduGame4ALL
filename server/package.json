@@ -16,7 +16,8 @@
     "manage-games": "tsx scripts/manage-games.ts",
     "test:profile": "tsx scripts/test-profile.ts",
     "test:game-session": "tsx scripts/test-game-session.ts",
-    "test:games-crud": "tsx scripts/test-games-crud.ts"
+    "test:games-crud": "tsx scripts/test-games-crud.ts",
+    "test:progress": "tsx scripts/test-progress.ts"
   },
   "keywords": [],
   "author": "",
