@@ -1,6 +1,10 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'url';
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../.env') });
 const API_URL = process.env.API_URL || 'http://localhost:3000';
@@ -15,13 +19,19 @@ async function testDashboardEndpoint() {
         try {
             const testEmail = `test-dashboard-${Date.now()}@example.com`;
             const testPassword = 'TestPassword123!';
+            // Register user
             const registerRes = await axios.post(`${API_URL}/api/auth/register`, {
                 email: testEmail,
                 password: testPassword,
                 name: 'Dashboard Test User',
             });
-            authToken = registerRes.data.accessToken;
-            testUserId = registerRes.data.user._id;
+            testUserId = registerRes.data._id;
+            // Login to get access token
+            const loginRes = await axios.post(`${API_URL}/api/auth/login`, {
+                email: testEmail,
+                password: testPassword,
+            });
+            authToken = loginRes.data.accessToken;
             console.log('✅ Test 1 Passed: User authenticated successfully');
             console.log(`   User ID: ${testUserId}`);
             results.push({

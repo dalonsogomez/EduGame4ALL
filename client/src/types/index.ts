@@ -124,6 +124,57 @@ export interface DailyChallenge {
   total: number;
   xpReward: number;
   bonusBadge?: string;
+  status?: 'in_progress' | 'completed' | 'expired';
+  percentage?: number;
+  completedAt?: string;
+}
+
+export interface Challenge {
+  _id: string;
+  title: string;
+  description: string;
+  type: 'play_games' | 'earn_xp' | 'complete_category' | 'perfect_score' | 'streak' | 'skill_focus';
+  category?: 'language' | 'culture' | 'soft-skills';
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  date: string;
+  requirements: {
+    targetCount?: number;
+    targetXP?: number;
+    minScore?: number;
+    specificGameId?: string;
+  };
+  rewards: {
+    xp: number;
+    bonusBadgeId?: string;
+  };
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserChallenge {
+  _id: string;
+  userId: string;
+  challengeId: string;
+  status: 'in_progress' | 'completed' | 'expired';
+  progress: {
+    current: number;
+    target: number;
+    percentage: number;
+  };
+  completedAt?: string;
+  xpEarned: number;
+  bonusBadgeAwarded: boolean;
+  bonusBadgeId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChallengeStats {
+  totalCompleted: number;
+  totalXPEarned: number;
+  bonusBadgesEarned: number;
+  currentStreak: number;
 }
 
 export interface LeaderboardEntry {

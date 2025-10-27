@@ -30,5 +30,44 @@ export declare class GameService {
         endDate?: Date;
         limit?: number;
     }): Promise<IGameSession[]>;
+    static createGame(gameData: {
+        title: string;
+        description: string;
+        category: 'language' | 'culture' | 'soft-skills';
+        difficulty: number;
+        duration: number;
+        xpReward: number;
+        thumbnailUrl?: string;
+        questions: Array<{
+            question: string;
+            options: string[];
+            correctAnswer: number;
+            explanation?: string;
+            points: number;
+        }>;
+    }): Promise<IGame>;
+    static updateGame(gameId: string, updateData: Partial<{
+        title: string;
+        description: string;
+        category: 'language' | 'culture' | 'soft-skills';
+        difficulty: number;
+        duration: number;
+        xpReward: number;
+        thumbnailUrl: string;
+        isActive: boolean;
+        questions: Array<{
+            question: string;
+            options: string[];
+            correctAnswer: number;
+            explanation?: string;
+            points: number;
+        }>;
+    }>): Promise<IGame | null>;
+    static deleteGame(gameId: string): Promise<IGame | null>;
+    static getAllGames(filters?: {
+        category?: string;
+        difficulty?: number;
+        isActive?: boolean;
+    }): Promise<IGame[]>;
 }
 //# sourceMappingURL=gameService.d.ts.map

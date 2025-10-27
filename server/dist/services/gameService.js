@@ -3,6 +3,7 @@ import { GameSession } from '../models/GameSession';
 import { UserProgress } from '../models/UserProgress';
 import User from '../models/User';
 import { generateGameFeedback } from './llmService';
+import { ChallengeService } from './challengeService';
 import mongoose from 'mongoose';
 export class GameService {
     // Get all active games with optional filters
@@ -102,6 +103,20 @@ export class GameService {
         console.log('[GameService] Game session created with ID:', session._id, 'XP earned:', xpEarned);
         // Update user progress
         await this.updateUserProgress(userId, game.category, xpEarned);
+        // Update challenge progress
+        try {
+            await ChallengeService.updateChallengeProgress(new mongoose.Types.ObjectId(userId), {
+                gameId: new mongoose.Types.ObjectId(gameId),
+                category: game.category,
+                score: scorePercentage * 100,
+                xpEarned,
+            });
+            console.log('[GameService] Challenge progress updated');
+        }
+        catch (error) {
+            console.error('[GameService] Error updating challenge progress:', error);
+            // Don't fail the whole request if challenge update fails
+        }
         return { session, xpEarned, feedback };
     }
     // Update user progress after game completion
@@ -205,6 +220,100 @@ export class GameService {
             .lean();
         console.log(`[GameService] Found ${sessions.length} game sessions`);
         return sessions;
+    }
+    // Create a new game (admin only)
+    static async createGame(gameData) {
+        console.log('[GameService] Creating new game:', gameData.title);
+        // Validate difficulty
+        if (gameData.difficulty < 1 || gameData.difficulty > 5) {
+            throw new Error('Difficulty must be between 1 and 5');
+        }
+        // Validate questions
+        if (!gameData.questions || gameData.questions.length === 0) {
+            throw new Error('At least one question is required');
+        }
+        // Validate each question
+        for (const question of gameData.questions) {
+            if (question.options.length < 2) {
+                throw new Error('Each question must have at least 2 options');
+            }
+            if (question.correctAnswer < 0 || question.correctAnswer >= question.options.length) {
+                throw new Error('Correct answer index is out of bounds');
+            }
+        }
+        const game = await Game.create({
+            ...gameData,
+            isActive: true,
+        });
+        console.log('[GameService] Game created successfully with ID:', game._id);
+        return game;
+    }
+    // Update an existing game (admin only)
+    static async updateGame(gameId, updateData) {
+        console.log('[GameService] Updating game:', gameId);
+        if (!mongoose.Types.ObjectId.isValid(gameId)) {
+            throw new Error('Invalid game ID');
+        }
+        // Validate difficulty if provided
+        if (updateData.difficulty !== undefined && (updateData.difficulty < 1 || updateData.difficulty > 5)) {
+            throw new Error('Difficulty must be between 1 and 5');
+        }
+        // Validate questions if provided
+        if (updateData.questions) {
+            if (updateData.questions.length === 0) {
+                throw new Error('At least one question is required');
+            }
+            for (const question of updateData.questions) {
+                if (question.options.length < 2) {
+                    throw new Error('Each question must have at least 2 options');
+                }
+                if (question.correctAnswer < 0 || question.correctAnswer >= question.options.length) {
+                    throw new Error('Correct answer index is out of bounds');
+                }
+            }
+        }
+        const game = await Game.findByIdAndUpdate(gameId, updateData, {
+            new: true,
+            runValidators: true,
+        });
+        if (!game) {
+            console.log('[GameService] Game not found for update');
+            return null;
+        }
+        console.log('[GameService] Game updated successfully:', game.title);
+        return game;
+    }
+    // Delete a game (soft delete by setting isActive to false)
+    static async deleteGame(gameId) {
+        console.log('[GameService] Deleting game:', gameId);
+        if (!mongoose.Types.ObjectId.isValid(gameId)) {
+            throw new Error('Invalid game ID');
+        }
+        // Soft delete by setting isActive to false
+        const game = await Game.findByIdAndUpdate(gameId, { isActive: false }, { new: true });
+        if (!game) {
+            console.log('[GameService] Game not found for deletion');
+            return null;
+        }
+        console.log('[GameService] Game deleted successfully:', game.title);
+        return game;
+    }
+    // Get all games including inactive ones (admin only)
+    static async getAllGames(filters) {
+        console.log('[GameService] Fetching all games (including inactive) with filters:', filters);
+        const query = {};
+        if (filters?.category) {
+            query.category = filters.category;
+        }
+        if (filters?.difficulty) {
+            query.difficulty = filters.difficulty;
+        }
+        if (filters?.isActive !== undefined) {
+            query.isActive = filters.isActive;
+        }
+        const games = await Game.find(query).sort({ createdAt: -1 });
+        console.log(`[GameService] Found ${games.length} games`);
+        return games;
     }
 }
 //# sourceMappingURL=gameService.js.map

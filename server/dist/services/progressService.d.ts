@@ -5,6 +5,5 @@ export declare class ProgressService {
     static checkAndAwardBadges(userId: string): Promise<void>;
     static getGameHistory(userId: string, limit?: number): Promise<any[]>;
     static getWeeklyReport(userId: string): Promise<any>;
-    private static generateInsight;
 }
 //# sourceMappingURL=progressService.d.ts.map

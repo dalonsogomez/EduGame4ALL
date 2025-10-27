@@ -224,5 +224,167 @@ function generateFallbackFeedback(params, scorePercentage, correctAnswers, total
         personalizedMessage,
     };
 }
-export { sendLLMRequest, generateGameFeedback, };
+async function generateWeeklyInsights(params) {
+    console.log('[LLMService] Generating weekly insights for user');
+    // Check if any LLM provider is available
+    if (!openai && !anthropic) {
+        console.log('[LLMService] No LLM provider available, using fallback insights');
+        return generateFallbackInsights(params);
+    }
+    const activeDays = params.dailyActivity.filter(d => d.games > 0).length;
+    const bestDay = params.dailyActivity.reduce((max, day) => day.xp > max.xp ? day : max, params.dailyActivity[0]);
+    // Find most active category
+    const categoryEntries = Object.entries(params.categoryStats);
+    const mostActiveCategory = categoryEntries.reduce((max, [cat, stats]) => stats.games > (max.stats?.games || 0) ? { category: cat, stats } : max, { category: '', stats: { games: 0, xp: 0 } });
+    const prompt = `You are an encouraging educational AI assistant analyzing weekly learning progress for a refugee/immigrant learner on the EduGame4All platform.
+
+Weekly Performance Summary:
+- Total Games: ${params.totalGames}
+- Total XP Earned: ${params.totalXP}
+- Total Time: ${params.totalTime} minutes
+- Average Accuracy: ${params.avgAccuracy}%
+- User Level: ${params.userLevel}
+- Active Days: ${activeDays}/7
+- Best Day: ${bestDay.date} with ${bestDay.xp} XP
+
+Category Breakdown:
+- Language: ${params.categoryStats.language.games} games, ${params.categoryStats.language.xp} XP
+- Culture: ${params.categoryStats.culture.games} games, ${params.categoryStats.culture.xp} XP
+- Soft Skills: ${params.categoryStats['soft-skills'].games} games, ${params.categoryStats['soft-skills'].xp} XP
+
+Daily Activity Pattern:
+${params.dailyActivity.map(d => `${d.date}: ${d.games} games, ${d.xp} XP`).join('\n')}
+
+Please provide personalized weekly insights in JSON format with the following structure:
+{
+  "strengths": [3-4 specific strengths based on their performance patterns],
+  "improvements": [2-3 specific, actionable improvement suggestions],
+  "insights": [3-4 data-driven insights about their learning patterns, habits, or recommendations],
+  "aiGeneratedSummary": "A warm, comprehensive 3-4 sentence summary that celebrates their progress, acknowledges challenges, and motivates continued learning. Be specific about their achievements this week."
+}
+
+Important guidelines:
+- Be encouraging and culturally sensitive
+- Use simple, clear language appropriate for language learners
+- Focus on growth mindset and celebrate all progress
+- Make recommendations specific and actionable
+- Identify patterns in their learning behavior (time of day, consistency, category preferences)
+- If performance is low, be extra encouraging and focus on small wins
+- Keep all arrays to exactly 3-4 items for strengths and insights, 2-3 for improvements
+- Ensure the aiGeneratedSummary is warm, specific, and motivating
+
+Return ONLY the JSON object, no additional text.`;
+    try {
+        const provider = process.env.OPENAI_API_KEY ? 'openai' : 'anthropic';
+        const model = provider === 'openai' ? 'gpt-3.5-turbo' : 'claude-3-haiku-20240307';
+        console.log(`[LLMService] Using ${provider} to generate weekly insights`);
+        const response = await sendLLMRequest(provider, model, prompt);
+        // Parse the JSON response
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            throw new Error('Failed to extract JSON from LLM response');
+        }
+        const insights = JSON.parse(jsonMatch[0]);
+        console.log('[LLMService] Successfully generated weekly insights');
+        // Validate insights structure
+        if (!insights.strengths || !insights.improvements || !insights.insights || !insights.aiGeneratedSummary) {
+            throw new Error('Invalid insights structure from LLM');
+        }
+        return insights;
+    }
+    catch (error) {
+        console.error('[LLMService] Error generating weekly insights:', error);
+        console.log('[LLMService] Using fallback rule-based insights');
+        return generateFallbackInsights(params);
+    }
+}
+function generateFallbackInsights(params) {
+    const strengths = [];
+    const improvements = [];
+    const insights = [];
+    const activeDays = params.dailyActivity.filter(d => d.games > 0).length;
+    // Generate strengths
+    if (params.totalGames > 10) {
+        strengths.push('Excellent dedication with high game completion rate');
+    }
+    else if (params.totalGames > 5) {
+        strengths.push('Consistent engagement throughout the week');
+    }
+    else if (params.totalGames > 0) {
+        strengths.push('Taking important first steps in your learning journey');
+    }
+    if (params.avgAccuracy >= 80) {
+        strengths.push('Strong comprehension with high accuracy scores');
+    }
+    else if (params.avgAccuracy >= 60) {
+        strengths.push('Good understanding of core concepts');
+    }
+    if (activeDays >= 5) {
+        strengths.push('Maintained excellent learning consistency');
+    }
+    else if (activeDays >= 3) {
+        strengths.push('Building a good learning routine');
+    }
+    // Find most active category
+    const categoryEntries = Object.entries(params.categoryStats);
+    const mostActive = categoryEntries.reduce((max, [cat, stats]) => stats.games > (max.stats?.games || 0) ? { category: cat, stats } : max, { category: '', stats: { games: 0, xp: 0 } });
+    if (mostActive.stats.games > 0) {
+        const categoryName = mostActive.category === 'soft-skills' ? 'soft skills' : mostActive.category;
+        strengths.push(`Strong focus on ${categoryName} development`);
+    }
+    // Generate improvements
+    if (activeDays < 5) {
+        improvements.push('Try to maintain daily consistency for better retention');
+    }
+    const leastActive = categoryEntries.reduce((min, [cat, stats]) => stats.games < (min.stats?.games || Infinity) ? { category: cat, stats } : min, { category: '', stats: { games: 100, xp: 0 } });
+    if (leastActive.stats.games === 0) {
+        const categoryName = leastActive.category === 'soft-skills' ? 'soft skills' : leastActive.category;
+        improvements.push(`Explore ${categoryName} games to broaden your skills`);
+    }
+    if (params.avgAccuracy < 70) {
+        improvements.push('Review challenging topics before moving to harder levels');
+    }
+    // Generate insights
+    const bestDay = params.dailyActivity.reduce((max, day) => day.xp > max.xp ? day : max, params.dailyActivity[0]);
+    if (bestDay.xp > 0) {
+        insights.push(`Your most productive day was ${bestDay.date} with ${bestDay.xp} XP earned`);
+    }
+    if (activeDays >= 3) {
+        insights.push(`You were active ${activeDays} days this week - consistency builds mastery`);
+    }
+    const avgTimePerGame = params.totalGames > 0 ? Math.round(params.totalTime / params.totalGames) : 0;
+    if (avgTimePerGame > 0) {
+        insights.push(`You average ${avgTimePerGame} minutes per game - showing good focus`);
+    }
+    if (params.totalXP >= 400) {
+        insights.push("You're making excellent XP progress and ready to advance to higher levels");
+    }
+    else if (params.totalXP >= 200) {
+        insights.push('Solid XP gains this week - keep up the momentum');
+    }
+    else if (params.totalXP > 0) {
+        insights.push('Every XP point is progress - stay committed to your goals');
+    }
+    // Generate summary
+    let aiGeneratedSummary = '';
+    if (params.totalGames === 0) {
+        aiGeneratedSummary = "This week you haven't played any games yet. Remember, every learning journey starts with a single step. We're here to support you whenever you're ready to begin!";
+    }
+    else if (params.avgAccuracy >= 80 && params.totalGames >= 10) {
+        aiGeneratedSummary = `Outstanding week! You completed ${params.totalGames} games with ${params.avgAccuracy}% accuracy and earned ${params.totalXP} XP. Your dedication and strong performance show real mastery. Keep challenging yourself!`;
+    }
+    else if (params.totalGames >= 7) {
+        aiGeneratedSummary = `Great effort this week! You completed ${params.totalGames} games and earned ${params.totalXP} XP over ${activeDays} active days. You're building strong learning habits. Continue this momentum!`;
+    }
+    else {
+        aiGeneratedSummary = `You completed ${params.totalGames} games this week and earned ${params.totalXP} XP. Every game you play builds your skills and confidence. Keep learning at your own pace - you're making progress!`;
+    }
+    return {
+        strengths: strengths.slice(0, 4),
+        improvements: improvements.slice(0, 3),
+        insights: insights.slice(0, 4),
+        aiGeneratedSummary,
+    };
+}
+export { sendLLMRequest, generateGameFeedback, generateWeeklyInsights, };
 //# sourceMappingURL=llmService.js.map

@@ -8,6 +8,7 @@ import rewardRoutes from './routes/rewardRoutes';
 import resourceRoutes from './routes/resourceRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import profileRoutes from './routes/profileRoutes';
+import challengeRoutes from './routes/challengeRoutes';
 import { connectDB } from './config/database';
 import cors from 'cors';
 // Load environment variables
@@ -47,6 +48,8 @@ app.use('/api/rewards', rewardRoutes);
 app.use('/api/resources', resourceRoutes);
 // Dashboard Routes
 app.use('/api/dashboard', dashboardRoutes);
+// Challenge Routes
+app.use('/api/challenges', challengeRoutes);
 // If no routes handled the request, it's a 404
 app.use((req, res) => {
     res.status(404).send("Page not found.");

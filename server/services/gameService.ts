@@ -3,6 +3,7 @@ import { GameSession, IGameSession } from '../models/GameSession';
 import { UserProgress } from '../models/UserProgress';
 import User from '../models/User';
 import { generateGameFeedback } from './llmService';
+import { ChallengeService } from './challengeService';
 import mongoose from 'mongoose';
 
 export class GameService {
@@ -138,6 +139,23 @@ export class GameService {
 
     // Update user progress
     await this.updateUserProgress(userId, game.category, xpEarned);
+
+    // Update challenge progress
+    try {
+      await ChallengeService.updateChallengeProgress(
+        new mongoose.Types.ObjectId(userId),
+        {
+          gameId: new mongoose.Types.ObjectId(gameId),
+          category: game.category,
+          score: scorePercentage * 100,
+          xpEarned,
+        }
+      );
+      console.log('[GameService] Challenge progress updated');
+    } catch (error) {
+      console.error('[GameService] Error updating challenge progress:', error);
+      // Don't fail the whole request if challenge update fails
+    }
 
     return { session, xpEarned, feedback };
   }

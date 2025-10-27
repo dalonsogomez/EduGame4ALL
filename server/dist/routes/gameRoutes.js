@@ -1,7 +1,7 @@
 import express from 'express';
 import { GameService } from '../services/gameService';
 import { requireUser } from './middlewares/auth';
-import { ALL_ROLES } from 'shared';
+import { ALL_ROLES, ROLES } from 'shared';
 const router = express.Router();
 // Description: Get all games with optional filters
 // Endpoint: GET /api/games
@@ -120,6 +120,104 @@ router.post('/:id/session', requireUser(ALL_ROLES), async (req, res) => {
     }
     catch (error) {
         console.error(`Error submitting game session: ${error.message}`);
+        res.status(500).json({ error: error.message });
+    }
+});
+// Description: Create a new game (admin only)
+// Endpoint: POST /api/games
+// Request: { title: string, description: string, category: string, difficulty: number, duration: number, xpReward: number, thumbnailUrl?: string, questions: Array<Question> }
+// Response: { game: Game }
+router.post('/', requireUser([ROLES.ADMIN]), async (req, res) => {
+    try {
+        const { title, description, category, difficulty, duration, xpReward, thumbnailUrl, questions } = req.body;
+        // Validate required fields
+        if (!title || !description || !category || !difficulty || !duration || !xpReward || !questions) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+        // Validate category
+        if (!['language', 'culture', 'soft-skills'].includes(category)) {
+            return res.status(400).json({ error: 'Invalid category. Must be language, culture, or soft-skills' });
+        }
+        const game = await GameService.createGame({
+            title,
+            description,
+            category,
+            difficulty,
+            duration,
+            xpReward,
+            thumbnailUrl,
+            questions,
+        });
+        console.log(`[GameRoutes] Game created successfully: ${game._id}`);
+        res.status(201).json({ game });
+    }
+    catch (error) {
+        console.error(`Error creating game: ${error.message}`);
+        res.status(500).json({ error: error.message });
+    }
+});
+// Description: Update an existing game (admin only)
+// Endpoint: PUT /api/games/:id
+// Request: { title?: string, description?: string, category?: string, difficulty?: number, duration?: number, xpReward?: number, thumbnailUrl?: string, isActive?: boolean, questions?: Array<Question> }
+// Response: { game: Game }
+router.put('/:id', requireUser([ROLES.ADMIN]), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+        // Validate category if provided
+        if (updateData.category && !['language', 'culture', 'soft-skills'].includes(updateData.category)) {
+            return res.status(400).json({ error: 'Invalid category. Must be language, culture, or soft-skills' });
+        }
+        const game = await GameService.updateGame(id, updateData);
+        if (!game) {
+            return res.status(404).json({ error: 'Game not found' });
+        }
+        console.log(`[GameRoutes] Game updated successfully: ${game._id}`);
+        res.status(200).json({ game });
+    }
+    catch (error) {
+        console.error(`Error updating game: ${error.message}`);
+        res.status(500).json({ error: error.message });
+    }
+});
+// Description: Delete a game (soft delete, admin only)
+// Endpoint: DELETE /api/games/:id
+// Request: {}
+// Response: { message: string, game: Game }
+router.delete('/:id', requireUser([ROLES.ADMIN]), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const game = await GameService.deleteGame(id);
+        if (!game) {
+            return res.status(404).json({ error: 'Game not found' });
+        }
+        console.log(`[GameRoutes] Game deleted successfully: ${game._id}`);
+        res.status(200).json({ message: 'Game deleted successfully', game });
+    }
+    catch (error) {
+        console.error(`Error deleting game: ${error.message}`);
+        res.status(500).json({ error: error.message });
+    }
+});
+// Description: Get all games including inactive (admin only)
+// Endpoint: GET /api/games/admin/all
+// Request: { category?: string, difficulty?: number, isActive?: boolean }
+// Response: { games: Array<Game> }
+router.get('/admin/all', requireUser([ROLES.ADMIN]), async (req, res) => {
+    try {
+        const { category, difficulty, isActive } = req.query;
+        const filters = {};
+        if (category)
+            filters.category = category;
+        if (difficulty)
+            filters.difficulty = parseInt(difficulty);
+        if (isActive !== undefined)
+            filters.isActive = isActive === 'true';
+        const games = await GameService.getAllGames(filters);
+        res.status(200).json({ games });
+    }
+    catch (error) {
+        console.error(`Error fetching all games: ${error.message}`);
         res.status(500).json({ error: error.message });
     }
 });

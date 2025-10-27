@@ -2,6 +2,7 @@ import { UserProgress } from '../models/UserProgress';
 import { UserBadge } from '../models/UserBadge';
 import { Badge } from '../models/Badge';
 import { GameSession } from '../models/GameSession';
+import { generateWeeklyInsights } from './llmService';
 import mongoose from 'mongoose';
 export class ProgressService {
     // Get user progress
@@ -66,14 +67,15 @@ export class ProgressService {
                 progress = Math.min(100, Math.round((userProgress.totalXP / badge.xpRequired) * 100));
             }
             return {
-                id: badge._id,
+                _id: badge._id,
                 name: badge.name,
                 description: badge.description,
                 category: badge.category,
-                iconUrl: badge.iconUrl,
+                icon: badge.iconUrl || '🏆', // Map iconUrl to icon with default emoji
                 xpRequired: badge.xpRequired,
                 level: badge.level,
                 progress,
+                total: 100, // Progress out of 100
                 isEarned,
                 earnedAt,
             };
@@ -148,11 +150,15 @@ export class ProgressService {
         console.log(`[ProgressService] Returning ${history.length} game sessions`);
         return history;
     }
-    // Get weekly report
+    // Get weekly report with AI-generated insights
     static async getWeeklyReport(userId) {
         console.log('[ProgressService] Generating weekly report for user:', userId);
         if (!mongoose.Types.ObjectId.isValid(userId)) {
             throw new Error('Invalid user ID');
+        }
+        const userProgress = await this.getUserProgress(userId);
+        if (!userProgress) {
+            throw new Error('User progress not found');
         }
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -179,37 +185,75 @@ export class ProgressService {
                 categoryStats[game.category].xp += session.xpEarned;
             }
         });
-        const report = {
-            period: {
-                start: oneWeekAgo,
-                end: new Date(),
-            },
-            summary: {
+        // Build daily activity array for the past 7 days
+        const dailyActivity = [];
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            date.setHours(0, 0, 0, 0);
+            const nextDay = new Date(date);
+            nextDay.setDate(nextDay.getDate() + 1);
+            const daySessions = sessions.filter((s) => {
+                const sessionDate = new Date(s.completedAt);
+                return sessionDate >= date && sessionDate < nextDay;
+            });
+            dailyActivity.push({
+                day: dayNames[date.getDay()],
+                date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                games: daySessions.length,
+                xp: daySessions.reduce((sum, s) => sum + s.xpEarned, 0),
+            });
+        }
+        console.log('[ProgressService] Generating AI insights for weekly report');
+        // Generate AI insights
+        let aiInsights;
+        try {
+            aiInsights = await generateWeeklyInsights({
                 totalGames,
                 totalXP,
                 totalTime: Math.round(totalTime / 60), // Convert to minutes
                 avgAccuracy: Math.round(avgAccuracy),
+                categoryStats,
+                userLevel: userProgress.level,
+                dailyActivity: dailyActivity.map(d => ({
+                    date: d.date,
+                    games: d.games,
+                    xp: d.xp,
+                })),
+            });
+        }
+        catch (error) {
+            console.error('[ProgressService] Error generating AI insights:', error);
+            // Fallback will be handled by llmService
+            aiInsights = {
+                strengths: ['Completed weekly games'],
+                improvements: ['Keep practicing regularly'],
+                insights: ['Continue your learning journey'],
+                aiGeneratedSummary: 'Keep up the great work on your learning journey!',
+            };
+        }
+        const report = {
+            // Frontend-compatible format
+            gamesPlayed: totalGames,
+            totalTime: Math.round(totalTime / 60), // Convert to minutes
+            xpEarned: totalXP,
+            avgAccuracy: Math.round(avgAccuracy),
+            // Additional details
+            period: {
+                start: oneWeekAgo,
+                end: new Date(),
             },
             categoryBreakdown: categoryStats,
-            insight: this.generateInsight(totalGames, avgAccuracy, categoryStats),
+            weeklyActivity: dailyActivity,
+            // AI-generated insights
+            strengths: aiInsights.strengths,
+            improvements: aiInsights.improvements,
+            insights: aiInsights.insights,
+            aiSummary: aiInsights.aiGeneratedSummary,
         };
-        console.log('[ProgressService] Weekly report generated');
+        console.log('[ProgressService] Weekly report generated with AI insights');
         return report;
-    }
-    // Generate AI-like insight
-    static generateInsight(totalGames, avgAccuracy, categoryStats) {
-        if (totalGames === 0) {
-            return "You haven't played any games this week. Start your learning journey today!";
-        }
-        if (avgAccuracy >= 80) {
-            return `Excellent performance this week! You've completed ${totalGames} games with ${Math.round(avgAccuracy)}% accuracy. Keep up the great work!`;
-        }
-        else if (avgAccuracy >= 60) {
-            return `Good effort this week with ${totalGames} games completed. Try focusing on areas where you can improve to boost your accuracy.`;
-        }
-        else {
-            return `You've played ${totalGames} games this week. Consider reviewing the material and taking your time with each question to improve your scores.`;
-        }
     }
 }
 //# sourceMappingURL=progressService.js.map

@@ -1,7 +1,7 @@
 import { UserProgress } from '../models/UserProgress';
 import { GameSession } from '../models/GameSession';
-import { Game } from '../models/Game';
 import { UserBadge } from '../models/UserBadge';
+import { ChallengeService } from './challengeService';
 import mongoose from 'mongoose';
 export class DashboardService {
     // Get dashboard data for user
@@ -132,58 +132,61 @@ export class DashboardService {
     static async getLeaderboard(userId, limit = 10) {
         const topUsers = await UserProgress.find()
             .sort({ totalXP: -1 })
-            .limit(limit)
+            .limit(limit * 2) // Get more to account for null users
             .populate('userId', 'email name');
-        const leaderboard = topUsers.map((progress, index) => {
+        // Filter out entries where user doesn't exist
+        const validUsers = topUsers.filter((progress) => progress.userId !== null);
+        const leaderboard = validUsers.slice(0, limit).map((progress, index) => {
             const user = progress.userId;
             // Generate a consistent country code based on user ID (for demo purposes)
             const countries = ['US', 'ES', 'FR', 'DE', 'IT', 'SY', 'MA', 'VE', 'CO', 'MX'];
-            const countryIndex = user._id.toString().charCodeAt(0) % countries.length;
+            const userIdStr = user._id ? user._id.toString() : user.toString();
+            const countryIndex = userIdStr.charCodeAt(0) % countries.length;
             return {
                 rank: index + 1,
-                userId: progress.userId.toString(),
+                userId: userIdStr,
                 username: user.name || user.email.split('@')[0], // Use name or email prefix
                 xp: progress.totalXP,
                 country: countries[countryIndex],
-                isCurrentUser: progress.userId.toString() === userId,
+                isCurrentUser: userIdStr === userId,
             };
         });
         return leaderboard;
     }
-    // Get daily challenge with proper formatting
+    // Get daily challenge with proper formatting using ChallengeService
     static async getDailyChallenge(userId) {
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
-        const todayEnd = new Date(todayStart);
-        todayEnd.setDate(todayEnd.getDate() + 1);
-        // Count games completed today
-        const completedToday = await GameSession.countDocuments({
-            userId,
-            completedAt: { $gte: todayStart, $lt: todayEnd },
-        });
-        // Daily challenge: Complete 3 games
-        const dailyGoal = 3;
-        const progress = Math.min(completedToday, dailyGoal);
-        // Get a game for the daily challenge (use date as seed for consistency)
-        const games = await Game.find({ isActive: true });
-        let challengeGame = null;
-        if (games.length > 0) {
-            const today = new Date().toISOString().split('T')[0];
-            const seed = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-            const dailyGameIndex = seed % games.length;
-            challengeGame = games[dailyGameIndex];
+        try {
+            const userObjectId = new mongoose.Types.ObjectId(userId);
+            const { challenge, userChallenge } = await ChallengeService.getUserDailyChallenge(userObjectId);
+            return {
+                _id: challenge._id.toString(),
+                title: challenge.title,
+                description: challenge.description,
+                progress: userChallenge.progress.current,
+                total: userChallenge.progress.target,
+                xpReward: challenge.rewards.xp,
+                bonusBadge: challenge.rewards.bonusBadgeId
+                    ? (challenge.rewards.bonusBadgeId.name || 'Bonus Badge')
+                    : undefined,
+                status: userChallenge.status,
+                percentage: userChallenge.progress.percentage,
+                completedAt: userChallenge.completedAt,
+            };
         }
-        return {
-            _id: `daily-${todayStart.toISOString().split('T')[0]}`,
-            title: 'Complete 3 games today',
-            description: challengeGame
-                ? `Play educational games including "${challengeGame.title}"`
-                : 'Play educational games to improve your skills',
-            progress,
-            total: dailyGoal,
-            xpReward: 50,
-            bonusBadge: progress >= dailyGoal ? 'Daily Champion' : undefined,
-        };
+        catch (error) {
+            console.error('[DashboardService] Error fetching daily challenge:', error);
+            // Return a default challenge structure if there's an error
+            return {
+                _id: 'default',
+                title: 'Complete 3 games today',
+                description: 'Play educational games to improve your skills',
+                progress: 0,
+                total: 3,
+                xpReward: 100,
+                status: 'in_progress',
+                percentage: 0,
+            };
+        }
     }
 }
 //# sourceMappingURL=dashboardService.js.map
