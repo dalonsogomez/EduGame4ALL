@@ -4,6 +4,7 @@ import { UserProgress } from '../models/UserProgress';
 import User from '../models/User';
 import { generateGameFeedback } from './llmService';
 import { ChallengeService } from './challengeService';
+import XpService, { SkillCategory } from './xpService';
 import mongoose from 'mongoose';
 
 export class GameService {
@@ -137,8 +138,21 @@ export class GameService {
 
     console.log('[GameService] Game session created with ID:', session._id, 'XP earned:', xpEarned);
 
-    // Update user progress
-    await this.updateUserProgress(userId, game.category, xpEarned);
+    // Update user progress using XpService
+    const categoryMap: Record<string, SkillCategory> = {
+      'language': 'language',
+      'culture': 'culture',
+      'soft-skills': 'softSkills'
+    };
+    const skillCategory = categoryMap[game.category] as SkillCategory;
+
+    if (skillCategory) {
+      await XpService.awardXP(new mongoose.Types.ObjectId(userId), xpEarned, skillCategory);
+      console.log('[GameService] XP awarded via XpService');
+    } else {
+      await XpService.awardXP(new mongoose.Types.ObjectId(userId), xpEarned);
+      console.log('[GameService] XP awarded (no category)');
+    }
 
     // Update challenge progress
     try {
@@ -158,69 +172,6 @@ export class GameService {
     }
 
     return { session, xpEarned, feedback };
-  }
-
-  // Update user progress after game completion
-  private static async updateUserProgress(
-    userId: string,
-    category: string,
-    xpEarned: number
-  ): Promise<void> {
-    console.log('[GameService] Updating user progress for user:', userId);
-
-    const progress = await UserProgress.findOne({ userId });
-
-    if (!progress) {
-      // Create new progress record
-      await UserProgress.create({
-        userId,
-        totalXP: xpEarned,
-        level: 1,
-        streak: 1,
-        lastActivityDate: new Date(),
-        weeklyProgress: 1,
-        skills: {
-          language: { xp: category === 'language' ? xpEarned : 0, level: 1 },
-          culture: { xp: category === 'culture' ? xpEarned : 0, level: 1 },
-          softSkills: { xp: category === 'soft-skills' ? xpEarned : 0, level: 1 },
-        },
-      });
-      console.log('[GameService] Created new progress record');
-      return;
-    }
-
-    // Update existing progress
-    progress.totalXP += xpEarned;
-    progress.level = Math.floor(progress.totalXP / 100) + 1; // Level up every 100 XP
-
-    // Update skill-specific XP
-    if (category === 'language') {
-      progress.skills.language.xp += xpEarned;
-      progress.skills.language.level = Math.floor(progress.skills.language.xp / 100) + 1;
-    } else if (category === 'culture') {
-      progress.skills.culture.xp += xpEarned;
-      progress.skills.culture.level = Math.floor(progress.skills.culture.xp / 100) + 1;
-    } else if (category === 'soft-skills') {
-      progress.skills.softSkills.xp += xpEarned;
-      progress.skills.softSkills.level = Math.floor(progress.skills.softSkills.xp / 100) + 1;
-    }
-
-    // Update streak
-    const lastActivity = new Date(progress.lastActivityDate);
-    const today = new Date();
-    const daysDiff = Math.floor((today.getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (daysDiff === 1) {
-      progress.streak += 1;
-    } else if (daysDiff > 1) {
-      progress.streak = 1;
-    }
-
-    progress.lastActivityDate = today;
-    progress.weeklyProgress += 1;
-
-    await progress.save();
-    console.log('[GameService] User progress updated, new total XP:', progress.totalXP);
   }
 
   // Get user's progress on a specific game

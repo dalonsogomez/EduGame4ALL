@@ -6,6 +6,7 @@ import { UserBadge } from '../models/UserBadge';
 import { Badge } from '../models/Badge';
 import { Game } from '../models/Game';
 import { GameSession } from '../models/GameSession';
+import XpService from './xpService';
 
 export class ChallengeService {
   /**
@@ -296,21 +297,13 @@ export class ChallengeService {
     userChallenge.progress.percentage = 100;
     userChallenge.xpEarned = challenge.rewards.xp;
 
-    // Award XP
-    const userProgress = await UserProgress.findOne({ userId });
-    if (userProgress) {
-      userProgress.totalXP += challenge.rewards.xp;
+    // Award XP using XpService
+    const xpResult = await XpService.awardXP(userId, challenge.rewards.xp);
 
-      // Update level if needed
-      const newLevel = Math.floor(userProgress.totalXP / 1000) + 1;
-      if (newLevel > userProgress.currentLevel) {
-        userProgress.currentLevel = newLevel;
-        console.log(`[ChallengeService] User leveled up to ${newLevel}`);
-      }
-
-      await userProgress.save();
-      console.log(`[ChallengeService] Awarded ${challenge.rewards.xp} XP`);
+    if (xpResult.leveledUp) {
+      console.log(`[ChallengeService] User leveled up from ${xpResult.oldLevel} to ${xpResult.newLevel}`);
     }
+    console.log(`[ChallengeService] Awarded ${challenge.rewards.xp} XP via XpService`);
 
     // Award bonus badge if applicable
     if (challenge.rewards.bonusBadgeId) {
