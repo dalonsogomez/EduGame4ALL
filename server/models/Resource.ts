@@ -19,10 +19,21 @@ export interface IResource extends Document {
   provider?: string;
   serviceType?: string;
   contact?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  hours?: string;
+  languages?: string[];
+  isFree?: boolean;
+  coordinates?: { lat: number; lng: number };
   // News-specific fields
   source?: string;
   publishedDate?: Date;
   imageUrl?: string;
+  category?: string;
+  difficulty?: string;
+  summary?: string;
+  content?: string;
   // Common fields
   url?: string;
   isActive: boolean;
@@ -65,10 +76,24 @@ const ResourceSchema: Schema = new Schema(
     provider: String,
     serviceType: String,
     contact: String,
+    address: String,
+    phone: String,
+    email: String,
+    hours: String,
+    languages: [String],
+    isFree: Boolean,
+    coordinates: {
+      lat: Number,
+      lng: Number,
+    },
     // News fields
     source: String,
     publishedDate: Date,
     imageUrl: String,
+    category: String,
+    difficulty: String,
+    summary: String,
+    content: String,
     // Common
     url: String,
     isActive: {

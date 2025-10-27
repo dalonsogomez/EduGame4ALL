@@ -19,7 +19,9 @@
     "test:games-crud": "tsx scripts/test-games-crud.ts",
     "test:progress": "tsx scripts/test-progress.ts",
     "test:challenges": "tsx scripts/test-challenges.ts",
-    "test:rewards": "tsx scripts/test-rewards.ts"
+    "test:rewards": "tsx scripts/test-rewards.ts",
+    "test:resources": "tsx scripts/test-resources.ts",
+    "demo:resources": "tsx scripts/demo-resources.ts"
   },
   "keywords": [],
   "author": "",
