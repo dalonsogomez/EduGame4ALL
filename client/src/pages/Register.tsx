@@ -19,8 +19,13 @@ import {
 import { useAuth } from "@/contexts/AuthContext"
 
 type RegisterForm = {
+  name: string
   email: string
   password: string
+  location: string
+  nativeLanguage: string
+  targetLanguage: string
+  userType: 'child' | 'adult' | 'educator'
 }
 
 export function Register() {
@@ -28,12 +33,19 @@ export function Register() {
   const { toast } = useToast()
   const { register: registerUser } = useAuth()
   const navigate = useNavigate()
-  const { register, handleSubmit } = useForm<RegisterForm>()
+  const { register, handleSubmit } = useForm<RegisterForm>({
+    defaultValues: {
+      userType: 'adult',
+      location: '',
+      nativeLanguage: 'English',
+      targetLanguage: 'Spanish',
+    }
+  })
 
   const onSubmit = async (data: RegisterForm) => {
     try {
       setLoading(true)
-      await registerUser(data.email, data.password);
+      await registerUser(data);
       toast({
         title: "Success",
         description: "Account created successfully",
@@ -61,6 +73,15 @@ export function Register() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Enter your full name"
+                {...register("name", { required: true })}
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -76,6 +97,33 @@ export function Register() {
                 type="password"
                 placeholder="Choose a password"
                 {...register("password", { required: true })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                type="text"
+                placeholder="Your city or country"
+                {...register("location")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nativeLanguage">Native Language</Label>
+              <Input
+                id="nativeLanguage"
+                type="text"
+                placeholder="e.g., English"
+                {...register("nativeLanguage")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="targetLanguage">Target Language</Label>
+              <Input
+                id="targetLanguage"
+                type="text"
+                placeholder="e.g., Spanish"
+                {...register("targetLanguage")}
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>

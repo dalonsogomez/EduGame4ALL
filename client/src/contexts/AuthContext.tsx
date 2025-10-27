@@ -2,11 +2,21 @@ import { createContext, useContext, useState, ReactNode } from "react";
 import { login as apiLogin, register as apiRegister } from "../api/auth";
 import { User } from "@shared/types/user";
 
+type RegisterData = {
+  name: string;
+  email: string;
+  password: string;
+  location?: string;
+  nativeLanguage?: string;
+  targetLanguage?: string;
+  userType?: 'child' | 'adult' | 'educator';
+};
+
 type AuthContextType = {
   isAuthenticated: boolean;
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
   logout: () => void;
 };
 
@@ -52,11 +62,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (email: string, password: string) => {
+  const register = async (data: RegisterData) => {
     try {
-      const response = await apiRegister(email, password);
-      const { accessToken, refreshToken, ...userData } = response;
-      setAuthData(accessToken, refreshToken, userData);
+      const response = await apiRegister(data);
+      const { accessToken, refreshToken, token, user, ...userData } = response;
+      setAuthData(accessToken || token, refreshToken, user || userData);
     } catch (error) {
       resetAuth();
       throw new Error(error?.message || 'Registration failed');

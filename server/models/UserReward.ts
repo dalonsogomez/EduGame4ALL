@@ -53,6 +53,6 @@ const UserRewardSchema: Schema = new Schema(
 
 // Indexes for efficient querying
 UserRewardSchema.index({ userId: 1, status: 1, redeemedAt: -1 });
-UserRewardSchema.index({ qrCode: 1 });
+// Note: qrCode index is automatically created by unique: true constraint
 
 export const UserReward = mongoose.model<IUserReward>('UserReward', UserRewardSchema);

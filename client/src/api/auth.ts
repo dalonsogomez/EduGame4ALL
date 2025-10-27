@@ -14,16 +14,26 @@ export const login = async (email: string, password: string) => {
   }
 };
 
+type RegisterData = {
+  name: string;
+  email: string;
+  password: string;
+  location?: string;
+  nativeLanguage?: string;
+  targetLanguage?: string;
+  userType?: 'child' | 'adult' | 'educator';
+};
+
 // Description: Register user functionality
 // Endpoint: POST /api/auth/register
-// Request: { email: string, password: string }
-// Response: { email: string }
-export const register = async (email: string, password: string) => {
+// Request: { name: string, email: string, password: string, location?: string, nativeLanguage?: string, targetLanguage?: string, userType?: string }
+// Response: { user: User, token: string, refreshToken: string }
+export const register = async (data: RegisterData) => {
   try {
-    const response = await api.post('/api/auth/register', {email, password});
+    const response = await api.post('/api/auth/register', data);
     return response.data;
   } catch (error) {
-    throw new Error(error?.response?.data?.message || error.message);
+    throw new Error(error?.response?.data?.message || error?.response?.data?.error || error.message);
   }
 };
 

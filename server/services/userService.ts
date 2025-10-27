@@ -5,6 +5,11 @@ interface CreateUserData {
   email: string;
   password: string;
   name?: string;
+  location?: string;
+  nativeLanguage?: string;
+  targetLanguage?: string;
+  userType?: 'child' | 'adult' | 'educator';
+  age?: number;
 }
 
 class UserService {
@@ -68,7 +73,16 @@ class UserService {
     }
   }
 
-  static async create({ email, password, name = '' }: CreateUserData): Promise<IUser> {
+  static async create({
+    email,
+    password,
+    name = '',
+    location = '',
+    nativeLanguage = '',
+    targetLanguage = '',
+    userType = 'adult',
+    age
+  }: CreateUserData): Promise<IUser> {
     if (!email) throw new Error('Email is required');
     if (!password) throw new Error('Password is required');
 
@@ -78,13 +92,25 @@ class UserService {
     const hash = await generatePasswordHash(password);
 
     try {
-      const user = new User({
+      const userData: any = {
         email,
         password: hash,
         name,
-      });
+        location,
+        nativeLanguage,
+        targetLanguage,
+        userType,
+      };
+
+      // Only include age if it's provided
+      if (age !== undefined) {
+        userData.age = age;
+      }
+
+      const user = new User(userData);
 
       await user.save();
+      console.log(`[UserService] Created user: ${user.email} with name: ${user.name}`);
       return user;
     } catch (err) {
       throw new Error(`Database error while creating new user: ${err}`);
