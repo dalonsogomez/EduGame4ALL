@@ -66,8 +66,15 @@ router.post('/register', async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Generate tokens
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    user.refreshToken = refreshToken;
+    await user.save();
+
     console.log(`[AuthRoutes] User registered successfully: ${user._id}`);
-    return res.status(200).json(user);
+    return res.status(200).json({ user: user.toObject(), token: accessToken, refreshToken });
   } catch (error) {
     console.error(`Error while registering user: ${error}`);
     return res.status(400).json({ error });

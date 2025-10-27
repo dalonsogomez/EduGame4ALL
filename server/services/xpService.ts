@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
-import UserProgress from '../models/UserProgress';
-import Badge from '../models/Badge';
-import UserBadge from '../models/UserBadge';
+import { UserProgress } from '../models/UserProgress';
+import { Badge } from '../models/Badge';
+import { UserBadge } from '../models/UserBadge';
 
 export type SkillCategory = 'language' | 'culture' | 'softSkills';
 
