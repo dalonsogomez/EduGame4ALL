@@ -299,24 +299,27 @@ export class XpService {
       sortField = { totalXP: -1 };
     }
 
-    const leaderboard = await UserProgress.find()
+    const leaderboard = await UserProgress.find({ userId: { $ne: null } })
       .sort(sortField)
       .limit(limit)
       .populate('userId', 'name email')
       .lean();
 
-    return leaderboard.map((entry, index) => {
-      const xp = category ? entry.skills[category].xp : entry.totalXP;
-      const level = this.calculateLevel(xp);
+    // Filter out any entries where population failed
+    return leaderboard
+      .filter((entry) => entry.userId != null)
+      .map((entry, index) => {
+        const xp = category ? entry.skills[category].xp : entry.totalXP;
+        const level = this.calculateLevel(xp);
 
-      return {
-        rank: index + 1,
-        userId: entry.userId,
-        xp,
-        level,
-        category: category || 'total',
-      };
-    });
+        return {
+          rank: index + 1,
+          userId: entry.userId,
+          xp,
+          level,
+          category: category || 'total',
+        };
+      });
   }
 }
 
