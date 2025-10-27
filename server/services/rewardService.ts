@@ -3,6 +3,7 @@ import { UserReward, IUserReward } from '../models/UserReward';
 import { UserProgress } from '../models/UserProgress';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
+import QRCode from 'qrcode';
 
 export class RewardService {
   // Get all available rewards
@@ -25,7 +26,7 @@ export class RewardService {
   static async redeemReward(
     userId: string,
     rewardId: string
-  ): Promise<{ userReward: IUserReward; qrCode: string }> {
+  ): Promise<{ userReward: any; qrCode: string }> {
     console.log('[RewardService] Redeeming reward for user:', userId, 'reward:', rewardId);
 
     if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(rewardId)) {
@@ -58,8 +59,8 @@ export class RewardService {
       throw new Error('Insufficient XP to redeem this reward');
     }
 
-    // Generate unique QR code
-    const qrCode = this.generateQRCode(userId, rewardId);
+    // Generate unique QR code string
+    const qrCodeString = this.generateQRCodeString(userId, rewardId);
 
     // Calculate expiry date (30 days from now or reward expiry, whichever is sooner)
     const defaultExpiry = new Date();
@@ -74,7 +75,7 @@ export class RewardService {
       rewardId,
       status: 'active',
       redeemedAt: new Date(),
-      qrCode,
+      qrCode: qrCodeString,
       expiryDate,
     });
 
@@ -86,9 +87,15 @@ export class RewardService {
     reward.availableQuantity -= 1;
     await reward.save();
 
-    console.log('[RewardService] Reward redeemed successfully, QR code:', qrCode);
+    // Generate QR code image as base64
+    const qrCodeImage = await this.generateQRCodeImage(qrCodeString);
 
-    return { userReward, qrCode };
+    console.log('[RewardService] Reward redeemed successfully, QR code string:', qrCodeString);
+
+    // Populate reward details for response
+    const populatedUserReward = await UserReward.findById(userReward._id).populate('rewardId');
+
+    return { userReward: populatedUserReward, qrCode: qrCodeImage };
   }
 
   // Get user's redeemed rewards
@@ -108,35 +115,58 @@ export class RewardService {
       .populate('rewardId')
       .sort({ redeemedAt: -1 });
 
-    const rewards = userRewards.map((ur) => {
-      const reward = ur.rewardId as any;
-      return {
-        id: ur._id,
-        reward: {
-          id: reward._id,
-          title: reward.title,
-          description: reward.description,
-          category: reward.category,
-          imageUrl: reward.imageUrl,
-        },
-        status: ur.status,
-        redeemedAt: ur.redeemedAt,
-        usedAt: ur.usedAt,
-        qrCode: ur.qrCode,
-        expiryDate: ur.expiryDate,
-      };
-    });
+    const rewards = await Promise.all(
+      userRewards.map(async (ur) => {
+        const reward = ur.rewardId as any;
+        // Generate QR code image from stored QR code string
+        const qrCodeImage = await this.generateQRCodeImage(ur.qrCode);
+
+        return {
+          id: ur._id,
+          reward: {
+            id: reward._id,
+            title: reward.title,
+            description: reward.description,
+            category: reward.category,
+            imageUrl: reward.imageUrl,
+          },
+          status: ur.status,
+          redeemedAt: ur.redeemedAt,
+          usedAt: ur.usedAt,
+          qrCode: qrCodeImage,
+          expiryDate: ur.expiryDate,
+        };
+      })
+    );
 
     console.log(`[RewardService] Returning ${rewards.length} user rewards`);
     return rewards;
   }
 
-  // Generate unique QR code
-  private static generateQRCode(userId: string, rewardId: string): string {
+  // Generate unique QR code string
+  private static generateQRCodeString(userId: string, rewardId: string): string {
     const timestamp = Date.now();
     const random = crypto.randomBytes(8).toString('hex');
     const data = `${userId}-${rewardId}-${timestamp}-${random}`;
     return crypto.createHash('sha256').update(data).digest('hex').substring(0, 16).toUpperCase();
+  }
+
+  // Generate QR code image as base64
+  private static async generateQRCodeImage(qrCodeString: string): Promise<string> {
+    try {
+      // Generate QR code as base64 data URL
+      const qrCodeDataURL = await QRCode.toDataURL(qrCodeString, {
+        errorCorrectionLevel: 'H',
+        type: 'image/png',
+        width: 300,
+        margin: 2,
+      });
+      console.log('[RewardService] QR code image generated successfully');
+      return qrCodeDataURL;
+    } catch (error: any) {
+      console.error('[RewardService] Error generating QR code image:', error);
+      throw new Error('Failed to generate QR code image');
+    }
   }
 
   // Mark reward as used
