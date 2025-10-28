@@ -8,6 +8,7 @@ import { generateAccessToken, generateRefreshToken } from '../utils/auth';
 import jwt from 'jsonwebtoken';
 import { ALL_ROLES } from 'shared';
 import mongoose from 'mongoose';
+import { StreakService } from '../services/streakService';
 
 const router = express.Router();
 
@@ -31,6 +32,16 @@ router.post('/login', async (req: Request, res: Response) => {
 
     user.refreshToken = refreshToken;
     await user.save();
+
+    // Update streak on login
+    try {
+      console.log(`[AuthRoutes] Updating streak for user login: ${user._id}`);
+      await StreakService.updateStreak(new mongoose.Types.ObjectId(user._id.toString()));
+    } catch (error) {
+      console.error('[AuthRoutes] Error updating streak on login:', error);
+      // Don't fail login if streak update fails
+    }
+
     return res.json({...user.toObject(), accessToken, refreshToken});
   } else {
     return sendError('Email or password is incorrect');

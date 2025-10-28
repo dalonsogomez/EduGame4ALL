@@ -22,7 +22,10 @@
     "test:rewards": "tsx scripts/test-rewards.ts",
     "test:resources": "tsx scripts/test-resources.ts",
     "test:xp": "tsx scripts/test-xp-system.ts",
-    "demo:resources": "tsx scripts/demo-resources.ts"
+    "test:streak": "tsx scripts/test-streak.ts",
+    "test:streak-expiration": "tsx scripts/test-streak-expiration.ts",
+    "demo:resources": "tsx scripts/demo-resources.ts",
+    "demo:streak": "tsx scripts/demo-streak.ts"
   },
   "keywords": [],
   "author": "",

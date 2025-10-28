@@ -5,6 +5,7 @@ import User from '../models/User';
 import { generateGameFeedback } from './llmService';
 import { ChallengeService } from './challengeService';
 import XpService, { SkillCategory } from './xpService';
+import { StreakService } from './streakService';
 import mongoose from 'mongoose';
 
 export class GameService {
@@ -169,6 +170,15 @@ export class GameService {
     } catch (error) {
       console.error('[GameService] Error updating challenge progress:', error);
       // Don't fail the whole request if challenge update fails
+    }
+
+    // Update streak on game play
+    try {
+      await StreakService.updateStreak(new mongoose.Types.ObjectId(userId));
+      console.log('[GameService] Streak updated after game completion');
+    } catch (error) {
+      console.error('[GameService] Error updating streak:', error);
+      // Don't fail the whole request if streak update fails
     }
 
     return { session, xpEarned, feedback };

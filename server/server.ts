@@ -11,6 +11,7 @@ import dashboardRoutes from './routes/dashboardRoutes';
 import profileRoutes from './routes/profileRoutes';
 import challengeRoutes from './routes/challengeRoutes';
 import xpRoutes from './routes/xpRoutes';
+import streakRoutes from './routes/streakRoutes';
 import { connectDB } from './config/database';
 import cors from 'cors';
 
@@ -62,6 +63,8 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/challenges', challengeRoutes);
 // XP Routes
 app.use('/api/xp', xpRoutes);
+// Streak Routes
+app.use('/api/streak', streakRoutes);
 
 // If no routes handled the request, it's a 404
 app.use((req: Request, res: Response) => {
