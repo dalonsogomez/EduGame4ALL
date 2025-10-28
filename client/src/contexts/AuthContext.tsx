@@ -58,7 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthData(accessToken, refreshToken, userData);
     } catch (error) {
       resetAuth();
-      throw new Error(error?.message || 'Login failed');
+      const errorMessage = error instanceof Error ? error.message : 'Login failed';
+      throw new Error(errorMessage);
     }
   };
 
@@ -69,7 +70,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthData(accessToken || token, refreshToken, user || userData);
     } catch (error) {
       resetAuth();
-      throw new Error(error?.message || 'Registration failed');
+      const errorMessage = error instanceof Error ? error.message : 'Registration failed';
+      throw new Error(errorMessage);
     }
   };
 

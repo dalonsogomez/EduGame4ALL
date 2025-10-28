@@ -84,11 +84,21 @@ router.post('/register', async (req: AuthRequest, res: Response) => {
     user.refreshToken = refreshToken;
     await user.save();
 
+    // Update streak on registration (first login)
+    try {
+      console.log(`[AuthRoutes] Updating streak for user login: ${user._id}`);
+      await StreakService.updateStreak(new mongoose.Types.ObjectId(user._id.toString()));
+    } catch (error) {
+      console.error('[AuthRoutes] Error updating streak on registration:', error);
+      // Don't fail registration if streak update fails
+    }
+
     console.log(`[AuthRoutes] User registered successfully: ${user._id}`);
     return res.status(200).json({ user: user.toObject(), token: accessToken, refreshToken });
   } catch (error) {
-    console.error(`Error while registering user: ${error}`);
-    return res.status(400).json({ error });
+    console.error(`[AuthRoutes] Error while registering user: ${error}`);
+    const errorMessage = error instanceof Error ? error.message : 'Registration failed';
+    return res.status(400).json({ error: errorMessage, message: errorMessage });
   }
 });
 
