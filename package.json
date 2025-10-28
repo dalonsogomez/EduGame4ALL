@@ -15,7 +15,11 @@
     "shared-dev": "cd shared && npm run dev",
     "start": "concurrently -n \"client,server\" \"npm run client\" \"npm run server\"",
     "lint": "concurrently -n \"client,server,shared\" \"cd client && npm run lint\" \"cd server && npm run lint\" \"cd shared && npm run lint\"",
-    "debug": "concurrently -n \"client,server\" \"npm run client\" \"cross-env NODE_OPTIONS=--inspect-brk=9229 npm run server\""
+    "debug": "concurrently -n \"client,server\" \"npm run client\" \"cross-env NODE_OPTIONS=--inspect-brk=9229 npm run server\"",
+    "seed": "cd server && npm run seed",
+    "cleanup-db": "cd server && npm run cleanup-db",
+    "cleanup-db:all": "cd server && npm run cleanup-db:all",
+    "cleanup-db:full": "cd server && npm run cleanup-db:full"
   },
   "author": "",
   "license": "ISC",
