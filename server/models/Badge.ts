@@ -57,3 +57,4 @@ const BadgeSchema: Schema = new Schema(
 BadgeSchema.index({ category: 1, xpRequired: 1, isActive: 1 });
 
 export const Badge = mongoose.model<IBadge>('Badge', BadgeSchema);
+export default Badge;

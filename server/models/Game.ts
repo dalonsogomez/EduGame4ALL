@@ -98,3 +98,4 @@ const GameSchema: Schema = new Schema(
 GameSchema.index({ category: 1, difficulty: 1, isActive: 1 });
 
 export const Game = mongoose.model<IGame>('Game', GameSchema);
+export default Game;

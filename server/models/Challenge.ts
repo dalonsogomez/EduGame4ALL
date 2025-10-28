@@ -86,3 +86,4 @@ const ChallengeSchema = new Schema<IChallenge>(
 ChallengeSchema.index({ date: 1, isActive: 1 });
 
 export const Challenge = mongoose.model<IChallenge>('Challenge', ChallengeSchema);
+export default Challenge;

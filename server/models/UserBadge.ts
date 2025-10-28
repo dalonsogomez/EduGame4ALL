@@ -41,3 +41,4 @@ UserBadgeSchema.index({ userId: 1, badgeId: 1 }, { unique: true });
 UserBadgeSchema.index({ userId: 1, earnedAt: -1 });
 
 export const UserBadge = mongoose.model<IUserBadge>('UserBadge', UserBadgeSchema);
+export default UserBadge;

@@ -112,3 +112,4 @@ const UserProgressSchema: Schema = new Schema(
 UserProgressSchema.index({ totalXP: -1 }); // For leaderboard
 
 export const UserProgress = mongoose.model<IUserProgress>('UserProgress', UserProgressSchema);
+export default UserProgress;

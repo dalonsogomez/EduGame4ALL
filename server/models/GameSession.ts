@@ -116,3 +116,4 @@ GameSessionSchema.index({ gameId: 1 });
 GameSessionSchema.index({ userId: 1, gameId: 1 });
 
 export const GameSession = mongoose.model<IGameSession>('GameSession', GameSessionSchema);
+export default GameSession;

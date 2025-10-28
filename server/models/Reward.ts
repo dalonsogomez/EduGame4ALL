@@ -70,3 +70,4 @@ const RewardSchema: Schema = new Schema(
 RewardSchema.index({ category: 1, xpCost: 1, isActive: 1, availableQuantity: 1 });
 
 export const Reward = mongoose.model<IReward>('Reward', RewardSchema);
+export default Reward;

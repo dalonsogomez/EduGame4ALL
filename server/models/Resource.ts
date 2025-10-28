@@ -110,3 +110,4 @@ const ResourceSchema: Schema = new Schema(
 ResourceSchema.index({ type: 1, isActive: 1, createdAt: -1 });
 
 export const Resource = mongoose.model<IResource>('Resource', ResourceSchema);
+export default Resource;
