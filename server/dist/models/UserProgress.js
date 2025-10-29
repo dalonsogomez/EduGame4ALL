@@ -77,7 +77,8 @@ const UserProgressSchema = new Schema({
     timestamps: true,
 });
 // Index for efficient querying
-UserProgressSchema.index({ userId: 1 });
+// Note: userId index is automatically created by unique: true constraint
 UserProgressSchema.index({ totalXP: -1 }); // For leaderboard
 export const UserProgress = mongoose.model('UserProgress', UserProgressSchema);
+export default UserProgress;
 //# sourceMappingURL=UserProgress.js.map

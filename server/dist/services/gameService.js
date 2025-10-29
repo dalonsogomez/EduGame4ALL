@@ -4,6 +4,8 @@ import { UserProgress } from '../models/UserProgress';
 import User from '../models/User';
 import { generateGameFeedback } from './llmService';
 import { ChallengeService } from './challengeService';
+import XpService from './xpService';
+import { StreakService } from './streakService';
 import mongoose from 'mongoose';
 export class GameService {
     // Get all active games with optional filters
@@ -78,7 +80,8 @@ export class GameService {
             console.log('[GameService] AI feedback generated successfully');
         }
         catch (error) {
-            console.error('[GameService] Failed to generate AI feedback:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error('[GameService] Failed to generate AI feedback:', errorMessage);
             // Use fallback feedback
             feedback = {
                 strengths: ['Completed the game'],
@@ -101,8 +104,21 @@ export class GameService {
             feedback,
         });
         console.log('[GameService] Game session created with ID:', session._id, 'XP earned:', xpEarned);
-        // Update user progress
-        await this.updateUserProgress(userId, game.category, xpEarned);
+        // Update user progress using XpService
+        const categoryMap = {
+            'language': 'language',
+            'culture': 'culture',
+            'soft-skills': 'softSkills'
+        };
+        const skillCategory = categoryMap[game.category];
+        if (skillCategory) {
+            await XpService.awardXP(new mongoose.Types.ObjectId(userId), xpEarned, skillCategory);
+            console.log('[GameService] XP awarded via XpService');
+        }
+        else {
+            await XpService.awardXP(new mongoose.Types.ObjectId(userId), xpEarned);
+            console.log('[GameService] XP awarded (no category)');
+        }
         // Update challenge progress
         try {
             await ChallengeService.updateChallengeProgress(new mongoose.Types.ObjectId(userId), {
@@ -114,63 +130,21 @@ export class GameService {
             console.log('[GameService] Challenge progress updated');
         }
         catch (error) {
-            console.error('[GameService] Error updating challenge progress:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error('[GameService] Error updating challenge progress:', errorMessage);
             // Don't fail the whole request if challenge update fails
         }
+        // Update streak on game play
+        try {
+            await StreakService.updateStreak(new mongoose.Types.ObjectId(userId));
+            console.log('[GameService] Streak updated after game completion');
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error('[GameService] Error updating streak:', errorMessage);
+            // Don't fail the whole request if streak update fails
+        }
         return { session, xpEarned, feedback };
-    }
-    // Update user progress after game completion
-    static async updateUserProgress(userId, category, xpEarned) {
-        console.log('[GameService] Updating user progress for user:', userId);
-        const progress = await UserProgress.findOne({ userId });
-        if (!progress) {
-            // Create new progress record
-            await UserProgress.create({
-                userId,
-                totalXP: xpEarned,
-                level: 1,
-                streak: 1,
-                lastActivityDate: new Date(),
-                weeklyProgress: 1,
-                skills: {
-                    language: { xp: category === 'language' ? xpEarned : 0, level: 1 },
-                    culture: { xp: category === 'culture' ? xpEarned : 0, level: 1 },
-                    softSkills: { xp: category === 'soft-skills' ? xpEarned : 0, level: 1 },
-                },
-            });
-            console.log('[GameService] Created new progress record');
-            return;
-        }
-        // Update existing progress
-        progress.totalXP += xpEarned;
-        progress.level = Math.floor(progress.totalXP / 100) + 1; // Level up every 100 XP
-        // Update skill-specific XP
-        if (category === 'language') {
-            progress.skills.language.xp += xpEarned;
-            progress.skills.language.level = Math.floor(progress.skills.language.xp / 100) + 1;
-        }
-        else if (category === 'culture') {
-            progress.skills.culture.xp += xpEarned;
-            progress.skills.culture.level = Math.floor(progress.skills.culture.xp / 100) + 1;
-        }
-        else if (category === 'soft-skills') {
-            progress.skills.softSkills.xp += xpEarned;
-            progress.skills.softSkills.level = Math.floor(progress.skills.softSkills.xp / 100) + 1;
-        }
-        // Update streak
-        const lastActivity = new Date(progress.lastActivityDate);
-        const today = new Date();
-        const daysDiff = Math.floor((today.getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24));
-        if (daysDiff === 1) {
-            progress.streak += 1;
-        }
-        else if (daysDiff > 1) {
-            progress.streak = 1;
-        }
-        progress.lastActivityDate = today;
-        progress.weeklyProgress += 1;
-        await progress.save();
-        console.log('[GameService] User progress updated, new total XP:', progress.totalXP);
     }
     // Get user's progress on a specific game
     static async getUserGameProgress(userId, gameId) {
@@ -187,8 +161,7 @@ export class GameService {
             throw new Error('Invalid session ID');
         }
         const session = await GameSession.findOne({ _id: sessionId, userId })
-            .populate('gameId', 'title category difficulty xpReward')
-            .lean();
+            .populate('gameId', 'title category difficulty xpReward');
         if (!session) {
             console.log('[GameService] Game session not found');
             return null;
@@ -216,8 +189,7 @@ export class GameService {
         const sessions = await GameSession.find(query)
             .populate('gameId', 'title category difficulty xpReward thumbnailUrl')
             .sort({ completedAt: -1 })
-            .limit(limit)
-            .lean();
+            .limit(limit);
         console.log(`[GameService] Found ${sessions.length} game sessions`);
         return sessions;
     }

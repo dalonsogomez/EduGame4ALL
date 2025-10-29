@@ -38,11 +38,6 @@ app.use(express.urlencoded({ extended: true }));
 // Database connection
 connectDB();
 
-app.on("error", (error: Error) => {
-  console.error(`Server error: ${error.message}`);
-  console.error(error.stack);
-});
-
 // Basic Routes
 app.use(basicRoutes);
 // Authentication Routes

@@ -62,7 +62,7 @@ class UserService {
             throw new Error(`Database error while authenticating user ${email} with password: ${err}`);
         }
     }
-    static async create({ email, password, name = '' }) {
+    static async create({ email, password, name = '', location = '', nativeLanguage = '', targetLanguage = '', userType = 'adult', age }) {
         if (!email)
             throw new Error('Email is required');
         if (!password)
@@ -72,12 +72,22 @@ class UserService {
             throw new Error('User with this email already exists');
         const hash = await generatePasswordHash(password);
         try {
-            const user = new User({
+            const userData = {
                 email,
                 password: hash,
                 name,
-            });
+                location,
+                nativeLanguage,
+                targetLanguage,
+                userType,
+            };
+            // Only include age if it's provided
+            if (age !== undefined) {
+                userData.age = age;
+            }
+            const user = new User(userData);
             await user.save();
+            console.log(`[UserService] Created user: ${user.email} with name: ${user.name}`);
             return user;
         }
         catch (err) {

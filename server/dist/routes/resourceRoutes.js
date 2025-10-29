@@ -3,7 +3,7 @@ import { ResourceService } from '../services/resourceService';
 import { requireUser } from './middlewares/auth';
 import { ALL_ROLES } from 'shared';
 const router = express.Router();
-// Description: Get jobs with optional filters
+// Description: Get jobs with optional filters and personalized match scoring
 // Endpoint: GET /api/resources/jobs
 // Request: { location?: string, jobType?: string }
 // Response: { jobs: Array<Job> }
@@ -15,11 +15,13 @@ router.get('/jobs', requireUser(ALL_ROLES), async (req, res) => {
             filters.location = location;
         if (jobType)
             filters.jobType = jobType;
-        const jobs = await ResourceService.getJobs(filters);
+        // Pass userId for personalized match scoring
+        const userId = req.user._id.toString();
+        const jobs = await ResourceService.getJobs(filters, userId);
         res.status(200).json({ jobs });
     }
     catch (error) {
-        console.error(`Error fetching jobs: ${error.message}`);
+        console.error(`[ResourceRoutes] Error fetching jobs: ${error.message}`);
         res.status(500).json({ error: error.message });
     }
 });
@@ -39,7 +41,7 @@ router.get('/grants', requireUser(ALL_ROLES), async (req, res) => {
         res.status(200).json({ grants });
     }
     catch (error) {
-        console.error(`Error fetching grants: ${error.message}`);
+        console.error(`[ResourceRoutes] Error fetching grants: ${error.message}`);
         res.status(500).json({ error: error.message });
     }
 });
@@ -57,22 +59,27 @@ router.get('/services', requireUser(ALL_ROLES), async (req, res) => {
         res.status(200).json({ services });
     }
     catch (error) {
-        console.error(`Error fetching services: ${error.message}`);
+        console.error(`[ResourceRoutes] Error fetching services: ${error.message}`);
         res.status(500).json({ error: error.message });
     }
 });
-// Description: Get news articles
+// Description: Get news articles with optional filters
 // Endpoint: GET /api/resources/news
-// Request: { limit?: number }
+// Request: { category?: string, limit?: number }
 // Response: { news: Array<News> }
 router.get('/news', requireUser(ALL_ROLES), async (req, res) => {
     try {
-        const limit = req.query.limit ? parseInt(req.query.limit) : 20;
-        const news = await ResourceService.getNews(limit);
+        const { category, limit } = req.query;
+        const filters = {};
+        if (category)
+            filters.category = category;
+        if (limit)
+            filters.limit = parseInt(limit);
+        const news = await ResourceService.getNews(filters);
         res.status(200).json({ news });
     }
     catch (error) {
-        console.error(`Error fetching news: ${error.message}`);
+        console.error(`[ResourceRoutes] Error fetching news: ${error.message}`);
         res.status(500).json({ error: error.message });
     }
 });

@@ -1,7 +1,33 @@
 import { Resource } from '../models/Resource';
+import { UserProgress } from '../models/UserProgress';
 export class ResourceService {
-    // Get jobs
-    static async getJobs(filters) {
+    // Calculate match score for a job based on user's skills and progress
+    static async calculateMatchScore(userId, job) {
+        try {
+            const userProgress = await UserProgress.findOne({ userId });
+            if (!userProgress) {
+                return 50; // Default score if no progress data
+            }
+            let score = 50; // Base score
+            // Add points based on language skills (up to +20)
+            const languageLevel = userProgress.skills.language.level;
+            score += Math.min(languageLevel * 4, 20);
+            // Add points based on soft skills (up to +15)
+            const softSkillsLevel = userProgress.skills.softSkills.level;
+            score += Math.min(softSkillsLevel * 3, 15);
+            // Add points based on culture knowledge (up to +15)
+            const cultureLevel = userProgress.skills.culture.level;
+            score += Math.min(cultureLevel * 3, 15);
+            // Ensure score is between 0 and 100
+            return Math.min(Math.max(score, 0), 100);
+        }
+        catch (error) {
+            console.error('[ResourceService] Error calculating match score:', error);
+            return 50; // Default score on error
+        }
+    }
+    // Get jobs with match scoring
+    static async getJobs(filters, userId) {
         console.log('[ResourceService] Fetching jobs with filters:', filters);
         const query = { type: 'job', isActive: true };
         if (filters?.location) {
@@ -10,7 +36,16 @@ export class ResourceService {
         if (filters?.jobType) {
             query.jobType = filters.jobType;
         }
-        const jobs = await Resource.find(query).sort({ matchScore: -1, createdAt: -1 });
+        let jobs = await Resource.find(query).sort({ matchScore: -1, createdAt: -1 }).lean();
+        // Calculate match scores for authenticated users
+        if (userId) {
+            console.log('[ResourceService] Calculating personalized match scores for user:', userId);
+            for (const job of jobs) {
+                job.matchScore = await this.calculateMatchScore(userId, job);
+            }
+            // Re-sort by calculated match score
+            jobs.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+        }
         console.log(`[ResourceService] Found ${jobs.length} jobs`);
         return jobs;
     }
@@ -33,10 +68,15 @@ export class ResourceService {
         console.log(`[ResourceService] Found ${services.length} services`);
         return services;
     }
-    // Get news
-    static async getNews(limit = 20) {
-        console.log('[ResourceService] Fetching news, limit:', limit);
+    // Get news with optional category filter
+    static async getNews(filters) {
+        console.log('[ResourceService] Fetching news with filters:', filters);
         const query = { type: 'news', isActive: true };
+        // Add category filter if provided
+        if (filters?.category) {
+            query.category = filters.category;
+        }
+        const limit = filters?.limit || 20;
         const news = await Resource.find(query).sort({ publishedDate: -1, createdAt: -1 }).limit(limit);
         console.log(`[ResourceService] Found ${news.length} news articles`);
         return news;

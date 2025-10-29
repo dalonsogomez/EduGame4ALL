@@ -29,4 +29,5 @@ export declare const UserProgress: mongoose.Model<IUserProgress, {}, {}, {}, mon
 }> & {
     __v: number;
 }, any>;
+export default UserProgress;
 //# sourceMappingURL=UserProgress.d.ts.map

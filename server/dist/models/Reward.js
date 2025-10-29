@@ -49,4 +49,5 @@ const RewardSchema = new Schema({
 // Index for efficient querying
 RewardSchema.index({ category: 1, xpCost: 1, isActive: 1, availableQuantity: 1 });
 export const Reward = mongoose.model('Reward', RewardSchema);
+export default Reward;
 //# sourceMappingURL=Reward.js.map

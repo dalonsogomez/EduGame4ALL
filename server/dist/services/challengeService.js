@@ -1,8 +1,8 @@
 import { Challenge } from '../models/Challenge';
 import { UserChallenge } from '../models/UserChallenge';
-import { UserProgress } from '../models/UserProgress';
 import { UserBadge } from '../models/UserBadge';
 import { Badge } from '../models/Badge';
+import XpService from './xpService';
 export class ChallengeService {
     /**
      * Generate a daily challenge for a specific date
@@ -110,8 +110,8 @@ export class ChallengeService {
             isActive: true,
         }).populate('rewards.bonusBadgeId');
         if (!challenge) {
-            challenge = await this.generateDailyChallenge(today);
-            await challenge.populate('rewards.bonusBadgeId');
+            const newChallenge = await this.generateDailyChallenge(today);
+            challenge = await Challenge.findById(newChallenge._id).populate('rewards.bonusBadgeId');
         }
         // Get or create user's challenge tracking
         let userChallenge = await UserChallenge.findOne({
@@ -239,19 +239,12 @@ export class ChallengeService {
         userChallenge.completedAt = new Date();
         userChallenge.progress.percentage = 100;
         userChallenge.xpEarned = challenge.rewards.xp;
-        // Award XP
-        const userProgress = await UserProgress.findOne({ userId });
-        if (userProgress) {
-            userProgress.totalXP += challenge.rewards.xp;
-            // Update level if needed
-            const newLevel = Math.floor(userProgress.totalXP / 1000) + 1;
-            if (newLevel > userProgress.currentLevel) {
-                userProgress.currentLevel = newLevel;
-                console.log(`[ChallengeService] User leveled up to ${newLevel}`);
-            }
-            await userProgress.save();
-            console.log(`[ChallengeService] Awarded ${challenge.rewards.xp} XP`);
+        // Award XP using XpService
+        const xpResult = await XpService.awardXP(userId, challenge.rewards.xp);
+        if (xpResult.leveledUp) {
+            console.log(`[ChallengeService] User leveled up from ${xpResult.oldLevel} to ${xpResult.newLevel}`);
         }
+        console.log(`[ChallengeService] Awarded ${challenge.rewards.xp} XP via XpService`);
         // Award bonus badge if applicable
         if (challenge.rewards.bonusBadgeId) {
             await this.checkAndAwardBonusBadge(userId, challenge.rewards.bonusBadgeId, userChallenge);

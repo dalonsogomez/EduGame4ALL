@@ -2,6 +2,7 @@ import { UserProgress } from '../models/UserProgress';
 import { GameSession } from '../models/GameSession';
 import { UserBadge } from '../models/UserBadge';
 import { ChallengeService } from './challengeService';
+import XpService from './xpService';
 import mongoose from 'mongoose';
 export class DashboardService {
     // Get dashboard data for user
@@ -25,7 +26,7 @@ export class DashboardService {
         console.log('[DashboardService] Dashboard data fetched successfully');
         return dashboardData;
     }
-    // Get user skills in the format expected by frontend
+    // Get user skills in the format expected by frontend using XpService
     static async getUserSkills(userId) {
         let progress = await UserProgress.findOne({ userId });
         if (!progress) {
@@ -45,32 +46,32 @@ export class DashboardService {
                 },
             });
         }
-        // XP required for next level follows a progressive formula
-        const calculateXPToNextLevel = (level) => {
-            return Math.floor(100 * Math.pow(1.5, level - 1));
-        };
         const skills = progress.skills;
+        // Use XpService for consistent level calculations
+        const languageInfo = XpService.getLevelInfo(skills.language.xp);
+        const cultureInfo = XpService.getLevelInfo(skills.culture.xp);
+        const softSkillsInfo = XpService.getLevelInfo(skills.softSkills.xp);
         return [
             {
                 category: 'language',
-                level: skills.language.level,
+                level: languageInfo.currentLevel,
                 xp: skills.language.xp,
-                xpToNextLevel: calculateXPToNextLevel(skills.language.level),
-                percentage: Math.floor((skills.language.xp / calculateXPToNextLevel(skills.language.level)) * 100),
+                xpToNextLevel: languageInfo.xpForNextLevel,
+                percentage: Math.floor(languageInfo.progressPercentage),
             },
             {
                 category: 'culture',
-                level: skills.culture.level,
+                level: cultureInfo.currentLevel,
                 xp: skills.culture.xp,
-                xpToNextLevel: calculateXPToNextLevel(skills.culture.level),
-                percentage: Math.floor((skills.culture.xp / calculateXPToNextLevel(skills.culture.level)) * 100),
+                xpToNextLevel: cultureInfo.xpForNextLevel,
+                percentage: Math.floor(cultureInfo.progressPercentage),
             },
             {
                 category: 'softSkills',
-                level: skills.softSkills.level,
+                level: softSkillsInfo.currentLevel,
                 xp: skills.softSkills.xp,
-                xpToNextLevel: calculateXPToNextLevel(skills.softSkills.level),
-                percentage: Math.floor((skills.softSkills.xp / calculateXPToNextLevel(skills.softSkills.level)) * 100),
+                xpToNextLevel: softSkillsInfo.xpForNextLevel,
+                percentage: Math.floor(softSkillsInfo.progressPercentage),
             },
         ];
     }

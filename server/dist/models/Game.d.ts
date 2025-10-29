@@ -23,4 +23,5 @@ export declare const Game: mongoose.Model<IGame, {}, {}, {}, mongoose.Document<u
 }> & {
     __v: number;
 }, any>;
+export default Game;
 //# sourceMappingURL=Game.d.ts.map

@@ -15,4 +15,5 @@ export declare const Badge: mongoose.Model<IBadge, {}, {}, {}, mongoose.Document
 }> & {
     __v: number;
 }, any>;
+export default Badge;
 //# sourceMappingURL=Badge.d.ts.map

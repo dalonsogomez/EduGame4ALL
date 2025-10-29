@@ -1,5 +1,5 @@
 import { Resource, IResource } from '../models/Resource';
-import { User } from '../models/User';
+import User, { IUser } from '../models/User';
 import { UserProgress } from '../models/UserProgress';
 
 export class ResourceService {

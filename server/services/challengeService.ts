@@ -130,8 +130,8 @@ export class ChallengeService {
     }).populate('rewards.bonusBadgeId');
 
     if (!challenge) {
-      challenge = await this.generateDailyChallenge(today);
-      await challenge.populate('rewards.bonusBadgeId');
+      const newChallenge = await this.generateDailyChallenge(today);
+      challenge = await Challenge.findById(newChallenge._id).populate('rewards.bonusBadgeId');
     }
 
     // Get or create user's challenge tracking

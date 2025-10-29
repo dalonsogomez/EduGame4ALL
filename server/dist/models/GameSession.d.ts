@@ -28,4 +28,5 @@ export declare const GameSession: mongoose.Model<IGameSession, {}, {}, {}, mongo
 }> & {
     __v: number;
 }, any>;
+export default GameSession;
 //# sourceMappingURL=GameSession.d.ts.map
