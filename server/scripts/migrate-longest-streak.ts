@@ -63,16 +63,12 @@ async function migrateExistingRecords() {
 }
 
 // Execute migration
-if (require.main === module) {
-  migrateExistingRecords()
-    .then(() => {
-      console.log('✨ Migration script finished successfully\n');
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error('💥 Migration script failed:', error);
-      process.exit(1);
-    });
-}
-
-export { migrateExistingRecords };
+migrateExistingRecords()
+  .then(() => {
+    console.log('✨ Migration script finished successfully\n');
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error('💥 Migration script failed:', error);
+    process.exit(1);
+  });
