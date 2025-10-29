@@ -21,6 +21,11 @@ const UserProgressSchema = new Schema({
         default: 0,
         min: 0,
     },
+    longestStreak: {
+        type: Number,
+        default: 0,
+        min: 0,
+    },
     lastActivityDate: {
         type: Date,
         default: Date.now,

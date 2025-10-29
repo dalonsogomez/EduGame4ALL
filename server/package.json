@@ -28,7 +28,8 @@
     "test:streak": "tsx scripts/test-streak.ts",
     "test:streak-expiration": "tsx scripts/test-streak-expiration.ts",
     "demo:resources": "tsx scripts/demo-resources.ts",
-    "demo:streak": "tsx scripts/demo-streak.ts"
+    "demo:streak": "tsx scripts/demo-streak.ts",
+    "migrate:longest-streak": "tsx scripts/migrate-longest-streak.ts"
   },
   "keywords": [],
   "author": "",

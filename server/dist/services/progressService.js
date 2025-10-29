@@ -216,11 +216,7 @@ export class ProgressService {
                 avgAccuracy: Math.round(avgAccuracy),
                 categoryStats: categoryStats,
                 userLevel: userProgress.level,
-                dailyActivity: dailyActivity.map(d => ({
-                    date: d.date,
-                    games: d.games,
-                    xp: d.xp,
-                })),
+                dailyActivity: dailyActivity,
             });
         }
         catch (error) {

@@ -264,11 +264,7 @@ export class ProgressService {
         avgAccuracy: Math.round(avgAccuracy),
         categoryStats: categoryStats as any,
         userLevel: userProgress.level,
-        dailyActivity: dailyActivity.map(d => ({
-          date: d.date,
-          games: d.games,
-          xp: d.xp,
-        })),
+        dailyActivity: dailyActivity,
       });
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

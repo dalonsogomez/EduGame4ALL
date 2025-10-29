@@ -4,6 +4,7 @@ export interface IUserProgress extends Document {
     totalXP: number;
     level: number;
     streak: number;
+    longestStreak: number;
     lastActivityDate: Date;
     weeklyGoal: number;
     weeklyProgress: number;

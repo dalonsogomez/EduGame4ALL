@@ -117,7 +117,7 @@ export class XpService {
         userId,
         totalXP: 0,
         level: 1,
-        currentStreak: 0,
+        streak: 0,
         longestStreak: 0,
         skills: {
           language: { level: 1, xp: 0 },
@@ -281,7 +281,7 @@ export class XpService {
       },
       streak: {
         current: userProgress.streak,
-        longest: userProgress.streak, // Using current streak as longest for now
+        longest: userProgress.longestStreak,
       },
       lastActive: userProgress.lastActivityDate,
     };

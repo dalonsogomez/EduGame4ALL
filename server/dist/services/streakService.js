@@ -15,6 +15,7 @@ export class StreakService {
                 totalXP: 0,
                 level: 1,
                 streak: 0,
+                longestStreak: 0,
                 lastActivityDate: new Date(),
                 weeklyGoal: 5,
                 weeklyProgress: 0,
@@ -43,6 +44,10 @@ export class StreakService {
         else if (daysDifference === 1) {
             // Consecutive day, increment streak
             userProgress.streak += 1;
+            // Update longest streak if current streak is greater
+            if (userProgress.streak > userProgress.longestStreak) {
+                userProgress.longestStreak = userProgress.streak;
+            }
             userProgress.lastActivityDate = now;
             await userProgress.save();
             console.log('[StreakService] Streak incremented to:', userProgress.streak);

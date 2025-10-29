@@ -1,0 +1,74 @@
+# EduGame4ALL - Full-Stack Architecture
+
+direction: right
+
+# Main Containers
+
+User: User {
+  shape: person
+  width: 80
+}
+
+Browser: Browser (Client) {
+  shape: sequence_diagram
+
+  ReactApp: React + Vite + TS {
+    style.fill: "#61DAFB"
+  }
+
+  style.fill: "#E6F7FF"
+}
+
+Backend: Backend Server {
+  shape: sequence_diagram
+
+  NodeServer: Node.js + Express {
+    style.fill: "#8CC84B"
+  }
+
+  MongoDB: MongoDB Database {
+    shape: database
+    style.fill: "#4DB33D"
+  }
+
+  style.fill: "#E9F5E3"
+}
+
+AIServices: AI Services {
+  shape: sequence_diagram
+
+  FastAPI: Python + FastAPI {
+    style.fill: "#009688"
+  }
+
+  LLM: Llama 3.1 8B
+  Whisper: Whisper V3
+  Emotion: Wav2Vec2 / DistilBERT
+
+  style.fill: "#E0F2F1"
+}
+
+# Connections
+
+User -> Browser: Interacts with App
+
+Browser.ReactApp -> Backend.NodeServer: API Requests (REST)
+
+Backend.NodeServer <-> Backend.MongoDB: Data CRUD (Mongoose)
+
+Backend.NodeServer -> AIServices.FastAPI: AI Tasks (HTTP)
+
+AIServices.FastAPI -> AIServices.LLM: Generate Text
+AIServices.FastAPI -> AIServices.Whisper: Transcribe Speech
+AIServices.FastAPI -> AIServices.Emotion: Detect Emotion
+
+# Data Flow Example: Complete Game
+
+Browser.ReactApp -> Backend.NodeServer: 1. POST /api/sessions
+Backend.NodeServer -> Backend.MongoDB: 2. Save GameSession
+Backend.NodeServer -> Backend.NodeServer: 3. Calculate XP, Streak
+Backend.NodeServer -> Backend.MongoDB: 4. Update UserProgress
+Backend.NodeServer -> AIServices.FastAPI: 5. Request AI Feedback
+AIServices.FastAPI -> AIServices.LLM: 6. Get Feedback
+AIServices.FastAPI -> Backend.NodeServer: 7. Return AI Feedback
+Backend.NodeServer -> Browser.ReactApp: 8. Return Session Result
