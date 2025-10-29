@@ -14,18 +14,10 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: process.env.VITE_API_URL || 'http://localhost:3000',
         changeOrigin: true,
       },
-      '/logs': {
-        target: 'http://localhost:4444',
-        changeOrigin: true,
-      }
     },
-    allowedHosts: [
-      'localhost',
-      '.pythagora.ai'
-    ],
     watch: {
       ignored: ['**/node_modules/**', '**/dist/**', '**/public/**', '**/log/**']
     },

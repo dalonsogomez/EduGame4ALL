@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import express from 'express';
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import basicRoutes from './routes/index';
 import authRoutes from './routes/authRoutes';
 import gameRoutes from './routes/gameRoutes';
@@ -18,8 +18,13 @@ import cors from 'cors';
 // Load environment variables
 dotenv.config();
 
-if (!process.env.DATABASE_URL) {
-  console.error("Error: DATABASE_URL variables in .env missing.");
+// Validate required environment variables
+const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET', 'REFRESH_TOKEN_SECRET'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingEnvVars.length > 0) {
+  console.error(`Error: Required environment variables missing: ${missingEnvVars.join(', ')}`);
+  console.error('Please ensure all required variables are set in your .env file.');
   process.exit(-1);
 }
 
@@ -31,9 +36,30 @@ app.enable('json spaces');
 // We want to be consistent with URL paths, so we enable strict routing
 app.enable('strict routing');
 
-app.use(cors({}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// CORS configuration - restrict to specific origins in production
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:5173', 'http://localhost:3000'];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Security: Set request size limits to prevent DoS attacks
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Database connection
 connectDB();
@@ -67,15 +93,27 @@ app.use('/api/xp', xpRoutes);
 app.use('/api/streak', streakRoutes);
 
 // If no routes handled the request, it's a 404
-app.use((req: Request, res: Response) => {
-  res.status(404).send("Page not found.");
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.status(404).json({
+    success: false,
+    message: "Page not found.",
+    path: req.path
+  });
 });
 
-// Error handling
-app.use((err: Error, req: Request, res: Response) => {
+// Error handling middleware - must have 4 parameters
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(`Unhandled application error: ${err.message}`);
   console.error(err.stack);
-  res.status(500).send("There was an error serving your request.");
+
+  // Don't leak error details in production
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
+  res.status(500).json({
+    success: false,
+    message: isDevelopment ? err.message : "There was an error serving your request.",
+    ...(isDevelopment && { stack: err.stack })
+  });
 });
 
 app.listen(port, () => {

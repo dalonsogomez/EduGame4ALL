@@ -17,7 +17,7 @@ export interface IUser extends Document {
   lastLoginAt: Date;
   isActive: boolean;
   role: RoleValues;
-  refreshToken: string;
+  refreshToken: string | null;
 }
 
 const schema = new Schema<IUser>({
@@ -83,9 +83,9 @@ const schema = new Schema<IUser>({
   },
   refreshToken: {
     type: String,
-    unique: true,
+    sparse: true, // Allow multiple null values while maintaining uniqueness for non-null values
     index: true,
-    default: () => randomUUID(),
+    default: null,
   },
 }, {
   versionKey: false,
@@ -93,7 +93,9 @@ const schema = new Schema<IUser>({
 
 schema.set('toJSON', {
   transform: (doc: Document, ret: Record<string, unknown>) => {
+    // Remove sensitive fields from JSON responses
     delete ret.password;
+    delete ret.refreshToken;
     return ret;
   },
 });

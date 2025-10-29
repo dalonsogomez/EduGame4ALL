@@ -45,8 +45,7 @@ async function sendRequestToOpenAI(model: string, message: string): Promise<stri
       return response.choices[0].message.content || '';
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const errorStack = error instanceof Error ? error.stack : 'No stack trace';
-      console.error(`Error sending request to OpenAI (attempt ${i + 1}):`, errorMessage, errorStack);
+      console.error(`Error sending request to OpenAI (attempt ${i + 1}):`, errorMessage);
       if (i === MAX_RETRIES - 1) throw error;
       await sleep(RETRY_DELAY);
     }
@@ -61,18 +60,17 @@ async function sendRequestToAnthropic(model: string, message: string): Promise<s
 
   for (let i = 0; i < MAX_RETRIES; i++) {
     try {
-      console.log(`Sending request to Anthropic with model: ${model} and message: ${message}`);
+      console.log(`Sending request to Anthropic with model: ${model}`);
       const response = await anthropic.messages.create({
         model: model,
         messages: [{ role: 'user', content: message }],
         max_tokens: 1024,
       });
-      console.log(`Received response from Anthropic: ${JSON.stringify(response.content)}`);
+      console.log(`Received response from Anthropic successfully`);
       return response.content[0].type === 'text' ? response.content[0].text : '';
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const errorStack = error instanceof Error ? error.stack : 'No stack trace';
-      console.error(`Error sending request to Anthropic (attempt ${i + 1}):`, errorMessage, errorStack);
+      console.error(`Error sending request to Anthropic (attempt ${i + 1}):`, errorMessage);
       if (i === MAX_RETRIES - 1) throw error;
       await sleep(RETRY_DELAY);
     }

@@ -72,7 +72,8 @@ const setupInterceptors = (apiInstance: typeof axios) => {
           if (originalRequest.headers) {
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           }
-          return localApi;
+          // Retry the original request with the new token
+          return localApi(originalRequest);
         } catch (err) {
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('accessToken');
