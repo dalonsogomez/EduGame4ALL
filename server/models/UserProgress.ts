@@ -5,6 +5,7 @@ export interface IUserProgress extends Document {
   totalXP: number;
   level: number;
   streak: number;
+  longestStreak: number;
   lastActivityDate: Date;
   weeklyGoal: number;
   weeklyProgress: number;
@@ -45,6 +46,11 @@ const UserProgressSchema: Schema = new Schema(
       min: 1,
     },
     streak: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    longestStreak: {
       type: Number,
       default: 0,
       min: 0,

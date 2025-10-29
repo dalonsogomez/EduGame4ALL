@@ -1,5 +1,6 @@
 import { IGame } from '../models/Game';
 import { IGameSession } from '../models/GameSession';
+import { GameFeedback } from '../types';
 export declare class GameService {
     static getGames(filters?: {
         category?: string;
@@ -19,9 +20,8 @@ export declare class GameService {
     }): Promise<{
         session: IGameSession;
         xpEarned: number;
-        feedback: any;
+        feedback: GameFeedback;
     }>;
-    private static updateUserProgress;
     static getUserGameProgress(userId: string, gameId: string): Promise<number>;
     static getGameSession(sessionId: string, userId: string): Promise<IGameSession | null>;
     static getGameSessions(userId: string, filters?: {

@@ -39,4 +39,5 @@ const BadgeSchema = new Schema({
 // Index for efficient querying
 BadgeSchema.index({ category: 1, xpRequired: 1, isActive: 1 });
 export const Badge = mongoose.model('Badge', BadgeSchema);
+export default Badge;
 //# sourceMappingURL=Badge.js.map

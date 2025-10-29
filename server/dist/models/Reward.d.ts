@@ -18,4 +18,5 @@ export declare const Reward: mongoose.Model<IReward, {}, {}, {}, mongoose.Docume
 }> & {
     __v: number;
 }, any>;
+export default Reward;
 //# sourceMappingURL=Reward.d.ts.map

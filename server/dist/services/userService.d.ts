@@ -3,6 +3,11 @@ interface CreateUserData {
     email: string;
     password: string;
     name?: string;
+    location?: string;
+    nativeLanguage?: string;
+    targetLanguage?: string;
+    userType?: 'child' | 'adult' | 'educator';
+    age?: number;
 }
 declare class UserService {
     static list(): Promise<IUser[]>;
@@ -11,7 +16,7 @@ declare class UserService {
     static update(id: string, data: Partial<IUser>): Promise<IUser | null>;
     static delete(id: string): Promise<boolean>;
     static authenticateWithPassword(email: string, password: string): Promise<IUser | null>;
-    static create({ email, password, name }: CreateUserData): Promise<IUser>;
+    static create({ email, password, name, location, nativeLanguage, targetLanguage, userType, age }: CreateUserData): Promise<IUser>;
     static setPassword(user: IUser, password: string): Promise<IUser>;
 }
 export default UserService;

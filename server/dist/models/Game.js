@@ -72,4 +72,5 @@ const GameSchema = new Schema({
 // Index for efficient querying
 GameSchema.index({ category: 1, difficulty: 1, isActive: 1 });
 export const Game = mongoose.model('Game', GameSchema);
+export default Game;
 //# sourceMappingURL=Game.js.map

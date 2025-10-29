@@ -6,7 +6,7 @@
 import axios, { AxiosInstance } from 'axios';
 import FormData from 'form-data';
 import fs from 'fs';
-import { logger } from '../utils/logger.js';
+import { logger } from '../utils/logger';
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8001';
 

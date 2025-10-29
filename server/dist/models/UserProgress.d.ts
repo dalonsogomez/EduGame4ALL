@@ -4,6 +4,7 @@ export interface IUserProgress extends Document {
     totalXP: number;
     level: number;
     streak: number;
+    longestStreak: number;
     lastActivityDate: Date;
     weeklyGoal: number;
     weeklyProgress: number;
@@ -29,4 +30,5 @@ export declare const UserProgress: mongoose.Model<IUserProgress, {}, {}, {}, mon
 }> & {
     __v: number;
 }, any>;
+export default UserProgress;
 //# sourceMappingURL=UserProgress.d.ts.map

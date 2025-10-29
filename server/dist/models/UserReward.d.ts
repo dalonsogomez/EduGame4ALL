@@ -15,4 +15,5 @@ export declare const UserReward: mongoose.Model<IUserReward, {}, {}, {}, mongoos
 }> & {
     __v: number;
 }, any>;
+export default UserReward;
 //# sourceMappingURL=UserReward.d.ts.map

@@ -44,6 +44,7 @@ export class DashboardService {
         totalXP: 0,
         level: 1,
         streak: 0,
+        longestStreak: 0,
         lastActivityDate: new Date(),
         weeklyGoal: 5,
         weeklyProgress: 0,

@@ -1,0 +1,36 @@
+direction: right
+
+User: User { shape: person }
+
+Client: {
+  shape: package
+  label: "Browser (Client)"
+
+  ReactApp: React + Vite + TS
+}
+
+Server: {
+  shape: package
+  label: "Backend"
+
+  NodeServer: Node.js + Express
+  MongoDB: { shape: database }
+}
+
+AI: {
+  shape: package
+  label: "AI Services"
+
+  FastAPI: Python + FastAPI
+  Models: {
+    LLM: Llama 3.1 8B
+    Whisper: Whisper V3
+    Emotion: Wav2Vec2 / DistilBERT
+  }
+}
+
+User -> Client.ReactApp: Interacts
+Client.ReactApp -> Server.NodeServer: API Requests (REST)
+Server.NodeServer <-> Server.MongoDB: Data CRUD (Mongoose)
+Server.NodeServer -> AI.FastAPI: AI Tasks (HTTP)
+AI.FastAPI -> AI.Models

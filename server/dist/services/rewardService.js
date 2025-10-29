@@ -3,6 +3,7 @@ import { UserReward } from '../models/UserReward';
 import { UserProgress } from '../models/UserProgress';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
+import QRCode from 'qrcode';
 export class RewardService {
     // Get all available rewards
     static async getRewards(category) {
@@ -42,8 +43,8 @@ export class RewardService {
         if (userProgress.totalXP < reward.xpCost) {
             throw new Error('Insufficient XP to redeem this reward');
         }
-        // Generate unique QR code
-        const qrCode = this.generateQRCode(userId, rewardId);
+        // Generate unique QR code string
+        const qrCodeString = this.generateQRCodeString(userId, rewardId);
         // Calculate expiry date (30 days from now or reward expiry, whichever is sooner)
         const defaultExpiry = new Date();
         defaultExpiry.setDate(defaultExpiry.getDate() + 30);
@@ -56,7 +57,7 @@ export class RewardService {
             rewardId,
             status: 'active',
             redeemedAt: new Date(),
-            qrCode,
+            qrCode: qrCodeString,
             expiryDate,
         });
         // Deduct XP from user
@@ -65,8 +66,12 @@ export class RewardService {
         // Decrease available quantity
         reward.availableQuantity -= 1;
         await reward.save();
-        console.log('[RewardService] Reward redeemed successfully, QR code:', qrCode);
-        return { userReward, qrCode };
+        // Generate QR code image as base64
+        const qrCodeImage = await this.generateQRCodeImage(qrCodeString);
+        console.log('[RewardService] Reward redeemed successfully, QR code string:', qrCodeString);
+        // Populate reward details for response
+        const populatedUserReward = await UserReward.findById(userReward._id).populate('rewardId');
+        return { userReward: populatedUserReward, qrCode: qrCodeImage };
     }
     // Get user's redeemed rewards
     static async getUserRewards(userId, status) {
@@ -81,8 +86,10 @@ export class RewardService {
         const userRewards = await UserReward.find(query)
             .populate('rewardId')
             .sort({ redeemedAt: -1 });
-        const rewards = userRewards.map((ur) => {
+        const rewards = await Promise.all(userRewards.map(async (ur) => {
             const reward = ur.rewardId;
+            // Generate QR code image from stored QR code string
+            const qrCodeImage = await this.generateQRCodeImage(ur.qrCode);
             return {
                 id: ur._id,
                 reward: {
@@ -95,19 +102,37 @@ export class RewardService {
                 status: ur.status,
                 redeemedAt: ur.redeemedAt,
                 usedAt: ur.usedAt,
-                qrCode: ur.qrCode,
+                qrCode: qrCodeImage,
                 expiryDate: ur.expiryDate,
             };
-        });
+        }));
         console.log(`[RewardService] Returning ${rewards.length} user rewards`);
         return rewards;
     }
-    // Generate unique QR code
-    static generateQRCode(userId, rewardId) {
+    // Generate unique QR code string
+    static generateQRCodeString(userId, rewardId) {
         const timestamp = Date.now();
         const random = crypto.randomBytes(8).toString('hex');
         const data = `${userId}-${rewardId}-${timestamp}-${random}`;
         return crypto.createHash('sha256').update(data).digest('hex').substring(0, 16).toUpperCase();
+    }
+    // Generate QR code image as base64
+    static async generateQRCodeImage(qrCodeString) {
+        try {
+            // Generate QR code as base64 data URL
+            const qrCodeDataURL = await QRCode.toDataURL(qrCodeString, {
+                errorCorrectionLevel: 'H',
+                type: 'image/png',
+                width: 300,
+                margin: 2,
+            });
+            console.log('[RewardService] QR code image generated successfully');
+            return qrCodeDataURL;
+        }
+        catch (error) {
+            console.error('[RewardService] Error generating QR code image:', error);
+            throw new Error('Failed to generate QR code image');
+        }
     }
     // Mark reward as used
     static async markRewardAsUsed(userRewardId) {

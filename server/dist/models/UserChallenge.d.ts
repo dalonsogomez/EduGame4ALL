@@ -21,4 +21,5 @@ export declare const UserChallenge: mongoose.Model<IUserChallenge, {}, {}, {}, m
 }> & {
     __v: number;
 }, any>;
+export default UserChallenge;
 //# sourceMappingURL=UserChallenge.d.ts.map

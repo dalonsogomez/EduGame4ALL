@@ -117,7 +117,7 @@ export class XpService {
         userId,
         totalXP: 0,
         level: 1,
-        currentStreak: 0,
+        streak: 0,
         longestStreak: 0,
         skills: {
           language: { level: 1, xp: 0 },
@@ -206,11 +206,11 @@ export class XpService {
         });
 
         badgesEarned.push({
-          badgeId: badge._id,
-          title: badge.title,
+          badgeId: badge._id as any,
+          title: badge.name,
         });
 
-        console.log(`[XpService] Badge earned: ${badge.title} for reaching level ${totalLevel}`);
+        console.log(`[XpService] Badge earned: ${badge.name} for reaching level ${totalLevel}`);
       }
     }
 
@@ -236,11 +236,11 @@ export class XpService {
           });
 
           badgesEarned.push({
-            badgeId: badge._id,
-            title: badge.title,
+            badgeId: badge._id as any,
+            title: badge.name,
           });
 
-          console.log(`[XpService] Badge earned: ${badge.title} for ${category} level ${categoryLevel}`);
+          console.log(`[XpService] Badge earned: ${badge.name} for ${category} level ${categoryLevel}`);
         }
       }
     }
@@ -280,10 +280,10 @@ export class XpService {
         softSkills: this.getCategoryLevelInfo('softSkills', userProgress.skills.softSkills.xp),
       },
       streak: {
-        current: userProgress.currentStreak,
+        current: userProgress.streak,
         longest: userProgress.longestStreak,
       },
-      lastActive: userProgress.lastActive,
+      lastActive: userProgress.lastActivityDate,
     };
   }
 

@@ -7,13 +7,14 @@ import { ChallengeService } from './challengeService';
 import XpService, { SkillCategory } from './xpService';
 import { StreakService } from './streakService';
 import mongoose from 'mongoose';
+import { GameQueryFilters, GameSessionQueryFilters, GameFeedback } from '../types';
 
 export class GameService {
   // Get all active games with optional filters
   static async getGames(filters?: { category?: string; difficulty?: number }): Promise<IGame[]> {
     console.log('[GameService] Fetching games with filters:', filters);
 
-    const query: any = { isActive: true };
+    const query: GameQueryFilters = { isActive: true };
 
     if (filters?.category) {
       query.category = filters.category;
@@ -63,7 +64,7 @@ export class GameService {
         pointsEarned: number;
       }>;
     }
-  ): Promise<{ session: IGameSession; xpEarned: number; feedback: any }> {
+  ): Promise<{ session: IGameSession; xpEarned: number; feedback: GameFeedback }> {
     console.log('[GameService] Submitting game session for user:', userId, 'game:', gameId);
 
     if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(gameId)) {
@@ -86,7 +87,7 @@ export class GameService {
     console.log('[GameService] Generating AI-powered feedback');
 
     // Generate AI-powered personalized feedback
-    let feedback;
+    let feedback: GameFeedback;
     try {
       // Map answers with actual question text and options
       const detailedAnswers = sessionData.answers.map(answer => {
@@ -112,8 +113,9 @@ export class GameService {
       });
 
       console.log('[GameService] AI feedback generated successfully');
-    } catch (error) {
-      console.error('[GameService] Failed to generate AI feedback:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[GameService] Failed to generate AI feedback:', errorMessage);
       // Use fallback feedback
       feedback = {
         strengths: ['Completed the game'],
@@ -167,8 +169,9 @@ export class GameService {
         }
       );
       console.log('[GameService] Challenge progress updated');
-    } catch (error) {
-      console.error('[GameService] Error updating challenge progress:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[GameService] Error updating challenge progress:', errorMessage);
       // Don't fail the whole request if challenge update fails
     }
 
@@ -176,8 +179,9 @@ export class GameService {
     try {
       await StreakService.updateStreak(new mongoose.Types.ObjectId(userId));
       console.log('[GameService] Streak updated after game completion');
-    } catch (error) {
-      console.error('[GameService] Error updating streak:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[GameService] Error updating streak:', errorMessage);
       // Don't fail the whole request if streak update fails
     }
 
@@ -204,8 +208,7 @@ export class GameService {
     }
 
     const session = await GameSession.findOne({ _id: sessionId, userId })
-      .populate('gameId', 'title category difficulty xpReward')
-      .lean();
+      .populate('gameId', 'title category difficulty xpReward');
 
     if (!session) {
       console.log('[GameService] Game session not found');
@@ -213,7 +216,7 @@ export class GameService {
     }
 
     console.log('[GameService] Game session found');
-    return session as IGameSession;
+    return session;
   }
 
   // Get user's game sessions with optional filters
@@ -228,7 +231,7 @@ export class GameService {
   ): Promise<IGameSession[]> {
     console.log('[GameService] Fetching game sessions for user:', userId, 'with filters:', filters);
 
-    const query: any = { userId };
+    const query: GameSessionQueryFilters = { userId };
 
     if (filters?.gameId && mongoose.Types.ObjectId.isValid(filters.gameId)) {
       query.gameId = filters.gameId;
@@ -249,11 +252,10 @@ export class GameService {
     const sessions = await GameSession.find(query)
       .populate('gameId', 'title category difficulty xpReward thumbnailUrl')
       .sort({ completedAt: -1 })
-      .limit(limit)
-      .lean();
+      .limit(limit);
 
     console.log(`[GameService] Found ${sessions.length} game sessions`);
-    return sessions as IGameSession[];
+    return sessions;
   }
 
   // Create a new game (admin only)
@@ -398,7 +400,7 @@ export class GameService {
   }): Promise<IGame[]> {
     console.log('[GameService] Fetching all games (including inactive) with filters:', filters);
 
-    const query: any = {};
+    const query: GameQueryFilters = {};
 
     if (filters?.category) {
       query.category = filters.category;

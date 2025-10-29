@@ -9,6 +9,8 @@ import resourceRoutes from './routes/resourceRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import profileRoutes from './routes/profileRoutes';
 import challengeRoutes from './routes/challengeRoutes';
+import xpRoutes from './routes/xpRoutes';
+import streakRoutes from './routes/streakRoutes';
 import { connectDB } from './config/database';
 import cors from 'cors';
 // Load environment variables
@@ -28,10 +30,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // Database connection
 connectDB();
-app.on("error", (error) => {
-    console.error(`Server error: ${error.message}`);
-    console.error(error.stack);
-});
 // Basic Routes
 app.use(basicRoutes);
 // Authentication Routes
@@ -50,6 +48,10 @@ app.use('/api/resources', resourceRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 // Challenge Routes
 app.use('/api/challenges', challengeRoutes);
+// XP Routes
+app.use('/api/xp', xpRoutes);
+// Streak Routes
+app.use('/api/streak', streakRoutes);
 // If no routes handled the request, it's a 404
 app.use((req, res) => {
     res.status(404).send("Page not found.");

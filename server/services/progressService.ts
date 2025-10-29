@@ -2,8 +2,10 @@ import { UserProgress, IUserProgress } from '../models/UserProgress';
 import { UserBadge, IUserBadge } from '../models/UserBadge';
 import { Badge, IBadge } from '../models/Badge';
 import { GameSession, IGameSession } from '../models/GameSession';
+import { IGame } from '../models/Game';
 import { generateWeeklyInsights } from './llmService';
 import mongoose from 'mongoose';
+import { BadgeResponse, GameSessionResponse, WeeklyReportResponse, PopulatedGameSession } from '../types';
 
 export class ProgressService {
   // Get user progress
@@ -40,7 +42,7 @@ export class ProgressService {
   }
 
   // Get user badges with progress
-  static async getUserBadges(userId: string): Promise<any[]> {
+  static async getUserBadges(userId: string): Promise<BadgeResponse[]> {
     console.log('[ProgressService] Fetching badges for user:', userId);
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -81,7 +83,7 @@ export class ProgressService {
       }
 
       return {
-        _id: badge._id,
+        _id: badge._id.toString(),
         name: badge.name,
         description: badge.description,
         category: badge.category,
@@ -91,7 +93,7 @@ export class ProgressService {
         progress,
         total: 100, // Progress out of 100
         isEarned,
-        earnedAt,
+        earnedAt: earnedAt ? earnedAt.toISOString() : null,
       };
     });
 
@@ -143,7 +145,7 @@ export class ProgressService {
   }
 
   // Get user game history
-  static async getGameHistory(userId: string, limit = 20): Promise<any[]> {
+  static async getGameHistory(userId: string, limit = 20): Promise<GameSessionResponse[]> {
     console.log('[ProgressService] Fetching game history for user:', userId);
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -156,18 +158,18 @@ export class ProgressService {
       .limit(limit);
 
     const history = sessions.map((session) => {
-      const game = session.gameId as any;
+      const game = session.gameId as unknown as IGame;
       return {
-        id: session._id,
+        id: session._id.toString(),
         game: {
-          id: game._id,
+          id: game._id.toString(),
           title: game.title,
           category: game.category,
         },
         score: session.score,
         maxScore: session.maxScore,
         xpEarned: session.xpEarned,
-        completedAt: session.completedAt,
+        completedAt: session.completedAt.toISOString(),
         accuracy: Math.round((session.score / session.maxScore) * 100),
       };
     });
@@ -177,7 +179,7 @@ export class ProgressService {
   }
 
   // Get weekly report with AI-generated insights
-  static async getWeeklyReport(userId: string): Promise<any> {
+  static async getWeeklyReport(userId: string): Promise<WeeklyReportResponse> {
     console.log('[ProgressService] Generating weekly report for user:', userId);
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -206,14 +208,14 @@ export class ProgressService {
         : 0;
 
     // Category breakdown
-    const categoryStats: any = {
+    const categoryStats: Record<string, { games: number; xp: number; avgScore?: number; totalXP?: number }> = {
       language: { games: 0, xp: 0 },
       culture: { games: 0, xp: 0 },
       'soft-skills': { games: 0, xp: 0 },
     };
 
     sessions.forEach((session) => {
-      const game = session.gameId as any;
+      const game = session.gameId as unknown as IGame;
       if (categoryStats[game.category]) {
         categoryStats[game.category].games += 1;
         categoryStats[game.category].xp += session.xpEarned;
@@ -248,23 +250,25 @@ export class ProgressService {
     console.log('[ProgressService] Generating AI insights for weekly report');
 
     // Generate AI insights
-    let aiInsights;
+    let aiInsights: {
+      strengths: string[];
+      improvements: string[];
+      insights: string[];
+      aiGeneratedSummary: string;
+    };
     try {
       aiInsights = await generateWeeklyInsights({
         totalGames,
         totalXP,
         totalTime: Math.round(totalTime / 60), // Convert to minutes
         avgAccuracy: Math.round(avgAccuracy),
-        categoryStats,
+        categoryStats: categoryStats as any,
         userLevel: userProgress.level,
-        dailyActivity: dailyActivity.map(d => ({
-          date: d.date,
-          games: d.games,
-          xp: d.xp,
-        })),
+        dailyActivity: dailyActivity,
       });
-    } catch (error) {
-      console.error('[ProgressService] Error generating AI insights:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[ProgressService] Error generating AI insights:', errorMessage);
       // Fallback will be handled by llmService
       aiInsights = {
         strengths: ['Completed weekly games'],

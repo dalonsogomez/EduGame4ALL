@@ -60,4 +60,5 @@ UserChallengeSchema.index({ userId: 1, status: 1, createdAt: -1 });
 // Unique constraint: one user challenge per user per challenge
 UserChallengeSchema.index({ userId: 1, challengeId: 1 }, { unique: true });
 export const UserChallenge = mongoose.model('UserChallenge', UserChallengeSchema);
+export default UserChallenge;
 //# sourceMappingURL=UserChallenge.js.map

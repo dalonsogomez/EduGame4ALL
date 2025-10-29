@@ -67,7 +67,7 @@ export class ProgressService {
                 progress = Math.min(100, Math.round((userProgress.totalXP / badge.xpRequired) * 100));
             }
             return {
-                _id: badge._id,
+                _id: badge._id.toString(),
                 name: badge.name,
                 description: badge.description,
                 category: badge.category,
@@ -77,7 +77,7 @@ export class ProgressService {
                 progress,
                 total: 100, // Progress out of 100
                 isEarned,
-                earnedAt,
+                earnedAt: earnedAt ? earnedAt.toISOString() : null,
             };
         });
         console.log(`[ProgressService] Returning ${badgesWithProgress.length} badges`);
@@ -134,16 +134,16 @@ export class ProgressService {
         const history = sessions.map((session) => {
             const game = session.gameId;
             return {
-                id: session._id,
+                id: session._id.toString(),
                 game: {
-                    id: game._id,
+                    id: game._id.toString(),
                     title: game.title,
                     category: game.category,
                 },
                 score: session.score,
                 maxScore: session.maxScore,
                 xpEarned: session.xpEarned,
-                completedAt: session.completedAt,
+                completedAt: session.completedAt.toISOString(),
                 accuracy: Math.round((session.score / session.maxScore) * 100),
             };
         });
@@ -214,17 +214,14 @@ export class ProgressService {
                 totalXP,
                 totalTime: Math.round(totalTime / 60), // Convert to minutes
                 avgAccuracy: Math.round(avgAccuracy),
-                categoryStats,
+                categoryStats: categoryStats,
                 userLevel: userProgress.level,
-                dailyActivity: dailyActivity.map(d => ({
-                    date: d.date,
-                    games: d.games,
-                    xp: d.xp,
-                })),
+                dailyActivity: dailyActivity,
             });
         }
         catch (error) {
-            console.error('[ProgressService] Error generating AI insights:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error('[ProgressService] Error generating AI insights:', errorMessage);
             // Fallback will be handled by llmService
             aiInsights = {
                 strengths: ['Completed weekly games'],

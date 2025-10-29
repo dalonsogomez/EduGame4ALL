@@ -7,6 +7,7 @@ import { generateAccessToken, generateRefreshToken } from '../utils/auth';
 import jwt from 'jsonwebtoken';
 import { ALL_ROLES } from 'shared';
 import mongoose from 'mongoose';
+import { StreakService } from '../services/streakService';
 const router = express.Router();
 router.post('/login', async (req, res) => {
     const sendError = (msg) => res.status(400).json({ message: msg });
@@ -20,6 +21,15 @@ router.post('/login', async (req, res) => {
         const refreshToken = generateRefreshToken(user);
         user.refreshToken = refreshToken;
         await user.save();
+        // Update streak on login
+        try {
+            console.log(`[AuthRoutes] Updating streak for user login: ${user._id}`);
+            await StreakService.updateStreak(new mongoose.Types.ObjectId(user._id.toString()));
+        }
+        catch (error) {
+            console.error('[AuthRoutes] Error updating streak on login:', error);
+            // Don't fail login if streak update fails
+        }
         return res.json({ ...user.toObject(), accessToken, refreshToken });
     }
     else {
@@ -52,12 +62,27 @@ router.post('/register', async (req, res) => {
                 },
             });
         }
+        // Generate tokens
+        const accessToken = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user);
+        user.refreshToken = refreshToken;
+        await user.save();
+        // Update streak on registration (first login)
+        try {
+            console.log(`[AuthRoutes] Updating streak for user login: ${user._id}`);
+            await StreakService.updateStreak(new mongoose.Types.ObjectId(user._id.toString()));
+        }
+        catch (error) {
+            console.error('[AuthRoutes] Error updating streak on registration:', error);
+            // Don't fail registration if streak update fails
+        }
         console.log(`[AuthRoutes] User registered successfully: ${user._id}`);
-        return res.status(200).json(user);
+        return res.status(200).json({ user: user.toObject(), token: accessToken, refreshToken });
     }
     catch (error) {
-        console.error(`Error while registering user: ${error}`);
-        return res.status(400).json({ error });
+        console.error(`[AuthRoutes] Error while registering user: ${error}`);
+        const errorMessage = error instanceof Error ? error.message : 'Registration failed';
+        return res.status(400).json({ error: errorMessage, message: errorMessage });
     }
 });
 router.post('/logout', async (req, res) => {

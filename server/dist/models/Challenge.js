@@ -57,4 +57,5 @@ const ChallengeSchema = new Schema({
 // Index for finding today's challenge
 ChallengeSchema.index({ date: 1, isActive: 1 });
 export const Challenge = mongoose.model('Challenge', ChallengeSchema);
+export default Challenge;
 //# sourceMappingURL=Challenge.js.map

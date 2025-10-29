@@ -85,4 +85,5 @@ GameSessionSchema.index({ userId: 1, createdAt: -1 });
 GameSessionSchema.index({ gameId: 1 });
 GameSessionSchema.index({ userId: 1, gameId: 1 });
 export const GameSession = mongoose.model('GameSession', GameSessionSchema);
+export default GameSession;
 //# sourceMappingURL=GameSession.js.map
